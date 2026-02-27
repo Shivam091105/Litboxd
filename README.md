@@ -1,4 +1,5 @@
 #Litboxd
+
 A full-stack social platform for readers to track books, publish reviews, rate titles, and curate reading lists. LitBoxd is designed as a production-oriented application showcasing scalable backend architecture using Spring Boot and a modern, component-driven frontend built with React.
 
 Overview BookBoxd demonstrates:
