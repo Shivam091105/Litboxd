@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LitTheatre — Track. Review. Discover.</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════
+   DESIGN TOKENS
+════════════════════════════════════════ */
+:root {
+  --bg-primary:    #0d0f0e;
+  --bg-secondary:  #131614;
+  --bg-card:       #181b19;
+  --bg-elevated:   #1e2320;
+  --accent-green:  #00c875;
+  --accent-green-dim: #00c87518;
+  --accent-amber:  #f5a623;
+  --accent-red:    #e84057;
+  --text-primary:  #eef0ee;
+  --text-secondary:#8a9189;
+  --text-muted:    #4a524a;
+  --border:        #242824;
+  --border-light:  #2e332e;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     16px;
+  --nav-h:         58px;
+}
+
+/* ════════════════════════════════════════
+   RESET & BASE
+════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg-primary);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;overflow-x:hidden;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:var(--bg-primary);}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px;}
+a{text-decoration:none;color:inherit;}
+button{cursor:pointer;font-family:'DM Sans',sans-serif;}
+input,textarea{font-family:'DM Sans',sans-serif;}
+
+/* ════════════════════════════════════════
+   PAGE ROUTING
+════════════════════════════════════════ */
+.page{display:none;min-height:100vh;padding-top:var(--nav-h);}
+.page.active{display:block;}
+
+/* ════════════════════════════════════════
+   NAV
+════════════════════════════════════════ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;height:var(--nav-h);
+  background:rgba(13,15,14,0.93);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{
+  font-family:'Playfair Display',serif;font-size:22px;font-weight:900;
+  letter-spacing:-0.5px;color:var(--text-primary);
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+}
+.nav-dot{
+  width:8px;height:8px;background:var(--accent-green);border-radius:50%;
+  box-shadow:0 0 8px var(--accent-green);display:inline-block;flex-shrink:0;
+}
+.nav-links{display:flex;align-items:center;gap:4px;list-style:none;}
+.nav-links a{
+  color:var(--text-secondary);font-size:13px;font-weight:500;
+  padding:6px 12px;border-radius:var(--radius-sm);transition:all .2s;
+  letter-spacing:.2px;
+}
+.nav-links a:hover{color:var(--text-primary);background:var(--bg-elevated);}
+.nav-links a.active{color:var(--text-primary);background:var(--bg-elevated);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.search-bar{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:20px;padding:6px 14px;transition:all .2s;
+}
+.search-bar:hover{border-color:var(--border-light);}
+.search-bar input{
+  background:none;border:none;outline:none;
+  color:var(--text-primary);font-size:13px;width:160px;
+}
+.search-bar input::placeholder{color:var(--text-muted);}
+.search-icon{color:var(--text-muted);font-size:14px;}
+.btn{
+  padding:7px 18px;border-radius:20px;font-size:13px;font-weight:600;
+  transition:all .2s;border:none;letter-spacing:.2px;
+}
+.btn-outline{background:transparent;border:1px solid var(--border-light);color:var(--text-secondary);}
+.btn-outline:hover{border-color:var(--text-muted);color:var(--text-primary);}
+.btn-primary{background:var(--accent-green);color:#0d0f0e;}
+.btn-primary:hover{background:#00e085;box-shadow:0 0 20px rgba(0,200,117,.3);}
+.btn-ghost{background:transparent;color:var(--text-secondary);border:none;}
+.btn-ghost:hover{color:var(--text-primary);}
+.nav-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,#00c875,#00838a);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:12px;color:#0d0f0e;
+  border:2px solid var(--border-light);cursor:pointer;
+  transition:border-color .2s;
+}
+.nav-avatar:hover{border-color:var(--accent-green);}
+
+/* ════════════════════════════════════════
+   SHARED COMPONENTS
+════════════════════════════════════════ */
+.section{padding:48px 40px;max-width:1200px;margin:0 auto;}
+.section-header{
+  display:flex;align-items:baseline;justify-content:space-between;
+  margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--border);
+}
+.section-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;letter-spacing:-.3px;}
+.section-link{color:var(--accent-green);font-size:13px;font-weight:500;transition:opacity .2s;}
+.section-link:hover{opacity:.7;}
+
+/* Book cover color swatches */
+.bc1{background:linear-gradient(145deg,#1a3a2e,#0e2218);}
+.bc2{background:linear-gradient(145deg,#3a1a1a,#220e0e);}
+.bc3{background:linear-gradient(145deg,#1a1a3a,#0e0e22);}
+.bc4{background:linear-gradient(145deg,#3a2a1a,#22180e);}
+.bc5{background:linear-gradient(145deg,#2a1a3a,#180e22);}
+.bc6{background:linear-gradient(145deg,#1a3a3a,#0e2222);}
+.bc7{background:linear-gradient(145deg,#3a3a1a,#22220e);}
+.bc8{background:linear-gradient(145deg,#2a3a1a,#18220e);}
+
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.2);
+  color:var(--accent-amber);padding:2px 8px;border-radius:20px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+}
+.tag{
+  display:inline-block;background:var(--bg-elevated);border:1px solid var(--border);
+  color:var(--text-muted);padding:2px 8px;border-radius:4px;
+  font-size:11px;font-family:'DM Mono',monospace;
+}
+.live-dot{width:6px;height:6px;background:var(--accent-green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.fade-up{animation:fadeUp .35s ease both;}
+
+/* ════════════════════════════════════════
+   PAGE INDICATOR
+════════════════════════════════════════ */
+.page-indicator{
+  position:fixed;bottom:24px;right:24px;
+  background:var(--bg-elevated);border:1px solid var(--border-light);
+  border-radius:var(--radius-lg);padding:9px 14px;font-size:11px;
+  color:var(--text-muted);font-family:'DM Mono',monospace;
+  display:flex;align-items:center;gap:6px;z-index:999;
+  pointer-events:none;
+}
+
+/* ════════════════════════════════════════
+   FOOTER
+════════════════════════════════════════ */
+.site-footer{
+  background:var(--bg-secondary);border-top:1px solid var(--border);
+  padding:40px;margin-top:40px;
+}
+.footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;}
+.footer-brand .nav-logo{display:inline-flex;margin-bottom:12px;}
+.footer-desc{font-size:13px;color:var(--text-muted);line-height:1.7;max-width:260px;}
+.footer-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:14px;}
+.footer-links{list-style:none;}
+.footer-links li{margin-bottom:8px;}
+.footer-links a{color:var(--text-secondary);font-size:13px;transition:color .2s;}
+.footer-links a:hover{color:var(--text-primary);}
+.footer-bottom{
+  max-width:1200px;margin:24px auto 0;padding-top:24px;
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;color:var(--text-muted);
+}
+
+
+/* ════════════════════════════════════════
+   ── HOME PAGE ──
+════════════════════════════════════════ */
+.hero{padding:80px 40px 60px;position:relative;overflow:hidden;}
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 70% 50%,rgba(0,200,117,.07) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 60% at 20% 30%,rgba(245,166,35,.04) 0%,transparent 70%);
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:60px 60px;opacity:.3;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 20%,transparent 100%);
+}
+.hero-inner{
+  max-width:1200px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;
+}
+.hero-label{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--accent-green-dim);border:1px solid rgba(0,200,117,.2);
+  color:var(--accent-green);padding:5px 12px;border-radius:20px;
+  font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;
+}
+h1.hero-h{
+  font-family:'Playfair Display',serif;font-size:clamp(38px,4.5vw,62px);
+  font-weight:900;line-height:1.05;letter-spacing:-1.5px;margin-bottom:20px;
+}
+h1.hero-h em{font-style:italic;color:var(--accent-green);}
+.hero-sub{color:var(--text-secondary);font-size:16px;line-height:1.7;margin-bottom:32px;max-width:440px;}
+.hero-cta{display:flex;align-items:center;gap:12px;}
+.hero-cta .btn{padding:10px 24px;font-size:14px;}
+.hero-stats{display:flex;gap:32px;margin-top:40px;}
+.stat-num{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;line-height:1;}
+.stat-label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.hero-visual{display:flex;align-items:center;justify-content:center;position:relative;height:380px;}
+.book-spine{
+  position:absolute;width:52px;border-radius:4px 8px 8px 4px;box-shadow:4px 4px 16px rgba(0,0,0,.6);
+  display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;
+  font-family:'Playfair Display',serif;font-size:9px;font-weight:700;letter-spacing:1px;
+  color:rgba(255,255,255,.7);padding:12px 4px;cursor:pointer;transition:transform .3s;
+}
+.book-spine:hover{transform:translateY(-8px) !important;}
+.bs1{height:280px;background:linear-gradient(180deg,#1a472a,#0d2818);left:50%;transform:translateX(-50%) rotate(-6deg);}
+.bs2{height:320px;background:linear-gradient(180deg,#6b2737,#3d1420);left:42%;transform:translateX(-50%) rotate(-3deg);}
+.bs3{height:300px;background:linear-gradient(180deg,#1c3a5e,#0a1f3a);left:58%;transform:translateX(-50%) rotate(3deg);}
+.bs4{height:260px;background:linear-gradient(180deg,#4a2d00,#2a1a00);left:35%;transform:translateX(-50%) rotate(-9deg);}
+.bs5{height:290px;background:linear-gradient(180deg,#2d1b4e,#180f2e);left:66%;transform:translateX(-50%) rotate(7deg);}
+.bs6{height:240px;background:linear-gradient(180deg,#1a3d2e,#0d2018);left:28%;transform:translateX(-50%) rotate(-12deg);}
+.bs7{height:270px;background:linear-gradient(180deg,#3d1f1f,#200f0f);left:74%;transform:translateX(-50%) rotate(11deg);}
+
+/* currently reading bar */
+.cr-bar{
+  background:var(--bg-secondary);border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  padding:14px 40px;display:flex;align-items:center;gap:16px;overflow:hidden;
+}
+.cr-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent-green);white-space:nowrap;}
+.cr-divider{width:1px;height:20px;background:var(--border-light);flex-shrink:0;}
+.cr-scroll{display:flex;gap:24px;overflow:hidden;flex:1;}
+.cr-item{display:flex;align-items:center;gap:8px;flex-shrink:0;cursor:pointer;}
+.cr-cover{width:20px;height:30px;border-radius:2px;border:1px solid var(--border);}
+.cr-text{font-size:12px;color:var(--text-secondary);white-space:nowrap;}
+.cr-text strong{color:var(--text-primary);font-weight:600;}
+
+/* books grid */
+.books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:20px;}
+.book-card{cursor:pointer;}
+.book-cover{
+  width:100%;aspect-ratio:2/3;border-radius:var(--radius-md);overflow:hidden;
+  position:relative;background:var(--bg-card);border:1px solid var(--border);
+  transition:transform .25s,box-shadow .25s;
+}
+.book-card:hover .book-cover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,.5);}
+.book-cover-placeholder{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  padding:12px;text-align:center;font-family:'Playfair Display',serif;
+  font-size:10px;font-weight:700;color:rgba(255,255,255,.45);line-height:1.3;
+}
+.book-overlay{
+  position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.9) 0%,transparent 60%);
+  opacity:0;transition:opacity .25s;display:flex;align-items:flex-end;padding:10px;
+}
+.book-card:hover .book-overlay{opacity:1;}
+.quick-rate{display:flex;gap:2px;}
+.qs{color:var(--accent-amber);font-size:12px;cursor:pointer;}
+.book-meta{margin-top:10px;}
+.book-title-s{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.book-author-s{font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.book-rating-s{display:flex;align-items:center;gap:4px;margin-top:4px;}
+.stars-filled{color:var(--accent-amber);font-size:10px;letter-spacing:1px;}
+.rating-count{font-size:10px;color:var(--text-muted);font-family:'DM Mono',monospace;}
+
+/* feed */
+.feed-layout{display:grid;grid-template-columns:1fr 300px;gap:40px;}
+.activity-list{display:flex;flex-direction:column;}
+.activity-item{display:flex;gap:14px;padding:18px 0;border-bottom:1px solid var(--border);animation:fadeUp .3s ease;}
+.a-avatar{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:13px;border:1.5px solid var(--border-light);
+}
+.a-body{flex:1;min-width:0;}
+.a-text{font-size:13px;color:var(--text-secondary);line-height:1.5;margin-bottom:6px;}
+.a-text strong{color:var(--text-primary);font-weight:600;}
+.a-text a{color:var(--accent-green);}
+.a-text a:hover{text-decoration:underline;}
+.a-time{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;}
+.a-book-mini{
+  display:flex;gap:10px;align-items:center;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:8px 12px;margin-top:8px;
+}
+.mini-cover{width:28px;height:42px;border-radius:3px;background:var(--bg-elevated);flex-shrink:0;}
+.mini-info{min-width:0;}
+.mini-title{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mini-author{font-size:11px;color:var(--text-muted);}
+.review-quote{
+  background:var(--bg-card);border-left:3px solid var(--accent-green);
+  padding:10px 14px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+  margin-top:8px;font-size:13px;color:var(--text-secondary);font-style:italic;line-height:1.6;
+}
+
+/* sidebar */
+.sidebar{display:flex;flex-direction:column;gap:24px;}
+.widget{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;}
+.widget-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:16px;}
+.genre-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.genre-tag{
+  background:var(--bg-elevated);border:1px solid var(--border-light);
+  color:var(--text-secondary);padding:5px 12px;border-radius:20px;
+  font-size:12px;cursor:pointer;transition:all .2s;
+}
+.genre-tag:hover,.genre-tag.active{background:var(--accent-green-dim);border-color:rgba(0,200,117,.3);color:var(--accent-green);}
+.challenge-goal{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+.challenge-count{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;}
+.challenge-total{color:var(--text-muted);font-size:13px;}
+.progress-bar{height:6px;background:var(--bg-elevated);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent-green),#00e085);border-radius:3px;box-shadow:0 0 8px rgba(0,200,117,.4);}
+.challenge-label{font-size:12px;color:var(--text-muted);}
+.u-suggest{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.u-suggest:last-child{border-bottom:none;}
+.u-sug-av{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;border:1.5px solid var(--border-light);flex-shrink:0;
+}
+.u-sug-name{font-size:13px;font-weight:600;}
+.u-sug-books{font-size:11px;color:var(--text-muted);}
+.btn-follow{
+  padding:4px 12px;border:1px solid var(--border-light);background:transparent;
+  color:var(--text-secondary);border-radius:20px;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;
+}
+.btn-follow:hover,.btn-follow.following{border-color:var(--accent-green);color:var(--accent-green);}
+
+/* reviews grid */
+.reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;}
+.review-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px;transition:border-color .2s,transform .2s;cursor:pointer;
+}
+.review-card:hover{border-color:var(--border-light);transform:translateY(-2px);}
+.rc-header{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;}
+.rc-book-cover{width:52px;height:78px;border-radius:var(--radius-sm);background:var(--bg-elevated);flex-shrink:0;border:1px solid var(--border-light);}
+.rc-book-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;line-height:1.3;margin-bottom:2px;}
+.rc-book-author{font-size:12px;color:var(--text-muted);margin-bottom:6px;}
+.rc-user{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);}
+.rc-user-dot{color:var(--text-muted);}
+.rc-stars{color:var(--accent-amber);font-size:12px;letter-spacing:1px;}
+.rc-text{font-size:13px;color:var(--text-secondary);line-height:1.65;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+.rc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
+.rc-likes{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted);cursor:pointer;transition:color .2s;}
+.rc-likes:hover{color:var(--accent-red);}
+.rc-date{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;}
+
+
+/* ════════════════════════════════════════
+   ── LOG BOOK PAGE ──
+════════════════════════════════════════ */
+.log-page-wrap{
+  max-width:780px;margin:0 auto;padding:56px 40px 80px;
+}
+.log-page-header{margin-bottom:40px;}
+.log-page-title{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;letter-spacing:-1px;margin-bottom:8px;}
+.log-page-sub{color:var(--text-secondary);font-size:15px;}
+
+.log-search-big{
+  display:flex;gap:12px;margin-bottom:36px;
+}
+.log-search-input{
+  flex:1;background:var(--bg-card);border:1px solid var(--border-light);
+  border-radius:var(--radius-md);padding:13px 18px;font-size:15px;
+  color:var(--text-primary);outline:none;transition:border-color .2s;
+}
+.log-search-input:focus{border-color:var(--accent-green);}
+.log-search-input::placeholder{color:var(--text-muted);}
+.btn-search{background:var(--accent-green);color:#0d0f0e;border:none;border-radius:var(--radius-md);padding:0 24px;font-size:14px;font-weight:700;}
+.btn-search:hover{background:#00e085;}
+
+/* search results */
+.search-results{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  overflow:hidden;margin-bottom:32px;
+}
+.search-result-item{
+  display:flex;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .2s;align-items:center;
+}
+.search-result-item:last-child{border-bottom:none;}
+.search-result-item:hover{background:var(--bg-elevated);}
+.sr-cover{width:36px;height:54px;border-radius:4px;flex-shrink:0;border:1px solid var(--border);}
+.sr-info{flex:1;min-width:0;}
+.sr-title{font-size:14px;font-weight:600;margin-bottom:2px;}
+.sr-author{font-size:12px;color:var(--text-muted);}
+.sr-year{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;}
+.sr-select{padding:5px 14px;border:1px solid var(--border-light);background:transparent;color:var(--text-secondary);border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+.sr-select:hover{border-color:var(--accent-green);color:var(--accent-green);}
+
+/* log form */
+.log-form{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:32px;
+}
+.log-form-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:4px;}
+.log-form-book{font-size:13px;color:var(--text-muted);margin-bottom:28px;}
+.log-form-book span{color:var(--accent-green);font-weight:600;}
+
+.status-tabs{display:flex;gap:0;background:var(--bg-elevated);border-radius:var(--radius-sm);padding:3px;margin-bottom:28px;}
+.status-tab{
+  flex:1;padding:8px;text-align:center;font-size:12px;font-weight:600;
+  color:var(--text-muted);cursor:pointer;border-radius:4px;transition:all .2s;
+  border:none;background:none;font-family:'DM Sans',sans-serif;
+}
+.status-tab.active{background:var(--bg-card);color:var(--text-primary);box-shadow:0 1px 4px rgba(0,0,0,.3);}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.form-group{margin-bottom:20px;}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+.form-input{
+  width:100%;background:var(--bg-elevated);border:1px solid var(--border-light);
+  border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;
+  color:var(--text-primary);outline:none;transition:border-color .2s;
+}
+.form-input:focus{border-color:var(--accent-green);}
+.form-textarea{
+  width:100%;background:var(--bg-elevated);border:1px solid var(--border-light);
+  border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;
+  color:var(--text-primary);outline:none;resize:vertical;min-height:120px;transition:border-color .2s;
+}
+.form-textarea:focus{border-color:var(--accent-green);}
+.form-select{
+  width:100%;background:var(--bg-elevated);border:1px solid var(--border-light);
+  border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;
+  color:var(--text-primary);outline:none;cursor:pointer;
+}
+
+.star-rating-big{display:flex;gap:8px;align-items:center;}
+.star-btn-big{font-size:28px;cursor:pointer;color:var(--border-light);transition:all .15s;background:none;border:none;line-height:1;}
+.star-btn-big:hover,.star-btn-big.active{color:var(--accent-amber);}
+.rating-label{font-size:13px;color:var(--text-muted);margin-left:8px;font-style:italic;}
+
+.form-check{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;}
+.form-check input{accent-color:var(--accent-green);width:15px;height:15px;}
+.form-check label{font-size:13px;color:var(--text-secondary);cursor:pointer;}
+
+.form-actions{display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);}
+.form-actions-right{display:flex;gap:10px;}
+
+/* recently logged */
+.logged-grid{display:flex;flex-direction:column;gap:0;}
+.logged-item{
+  display:flex;gap:16px;align-items:center;padding:14px 0;
+  border-bottom:1px solid var(--border);
+}
+.logged-cover{width:44px;height:66px;border-radius:6px;flex-shrink:0;border:1px solid var(--border);}
+.logged-info{flex:1;min-width:0;}
+.logged-title{font-size:14px;font-weight:600;margin-bottom:2px;}
+.logged-author{font-size:12px;color:var(--text-muted);margin-bottom:6px;}
+.logged-rating{color:var(--accent-amber);font-size:12px;letter-spacing:1px;}
+.logged-date{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:2px;}
+.logged-status{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.ls-read{background:rgba(0,200,117,.1);color:var(--accent-green);border:1px solid rgba(0,200,117,.2);}
+.ls-reading{background:rgba(245,166,35,.1);color:var(--accent-amber);border:1px solid rgba(245,166,35,.2);}
+.ls-want{background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border-light);}
+
+
+/* ════════════════════════════════════════
+   ── PROFILE PAGE ──
+════════════════════════════════════════ */
+.profile-banner-big{
+  height:200px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#0a2e1a 0%,#1a0a2e 50%,#0a1a2e 100%);
+}
+.profile-banner-big::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent,transparent 30px,rgba(0,200,117,.015) 30px,rgba(0,200,117,.015) 31px);
+}
+.profile-banner-big::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 80% at 80% 50%,rgba(0,200,117,.08),transparent);
+}
+.profile-header-row{
+  max-width:1200px;margin:0 auto;padding:0 40px;
+  display:flex;align-items:flex-end;gap:20px;
+  margin-top:-56px;position:relative;z-index:2;
+  padding-bottom:24px;
+}
+.profile-avatar-xl{
+  width:112px;height:112px;border-radius:50%;
+  background:linear-gradient(135deg,#00c875,#00838a);
+  border:5px solid var(--bg-primary);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-size:38px;font-weight:700;color:#0d0f0e;
+  flex-shrink:0;
+}
+.profile-id{flex:1;padding-bottom:8px;}
+.profile-name{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;line-height:1.1;margin-bottom:4px;}
+.profile-handle{font-size:13px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-bottom:8px;}
+.profile-bio{font-size:14px;color:var(--text-secondary);line-height:1.6;max-width:500px;}
+.profile-actions{display:flex;gap:10px;padding-bottom:8px;flex-shrink:0;}
+
+.profile-nav{
+  border-bottom:1px solid var(--border);background:var(--bg-secondary);
+  position:sticky;top:var(--nav-h);z-index:10;
+}
+.profile-nav-inner{
+  max-width:1200px;margin:0 auto;padding:0 40px;
+  display:flex;gap:0;
+}
+.profile-tab{
+  padding:14px 20px;font-size:13px;font-weight:600;color:var(--text-muted);
+  border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;transition:all .2s;
+  border:none;background:none;font-family:'DM Sans',sans-serif;
+}
+.profile-tab:hover{color:var(--text-secondary);}
+.profile-tab.active{color:var(--text-primary);border-bottom-color:var(--accent-green);}
+
+.profile-body{max-width:1200px;margin:0 auto;padding:32px 40px;display:grid;grid-template-columns:1fr 280px;gap:40px;}
+
+.profile-stats-grid{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:1px;
+  background:var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:32px;
+  border:1px solid var(--border);
+}
+.profile-stat-box{
+  background:var(--bg-card);padding:20px 16px;text-align:center;cursor:pointer;transition:background .2s;
+}
+.profile-stat-box:hover{background:var(--bg-elevated);}
+.psb-num{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;line-height:1;margin-bottom:4px;}
+.psb-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;}
+
+.recent-reads-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;}
+.r-cover{border-radius:var(--radius-sm);border:1px solid var(--border);transition:transform .2s;cursor:pointer;}
+.r-cover:hover{transform:translateY(-3px);}
+
+/* rating chart */
+.rating-chart{margin-bottom:32px;}
+.rating-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.rating-label-s{font-size:12px;color:var(--text-secondary);width:20px;text-align:right;flex-shrink:0;}
+.rating-bar-wrap{flex:1;height:8px;background:var(--bg-elevated);border-radius:4px;overflow:hidden;}
+.rating-bar{height:100%;background:var(--accent-amber);border-radius:4px;}
+.rating-count-s{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;width:32px;}
+
+/* profile sidebar */
+.profile-sidebar{display:flex;flex-direction:column;gap:20px;}
+.year-breakdown{display:flex;flex-direction:column;gap:6px;}
+.yb-item{display:flex;align-items:center;justify-content:space-between;}
+.yb-year{font-size:13px;color:var(--text-secondary);}
+.yb-count{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);}
+.yb-bar-wrap{flex:1;height:4px;background:var(--bg-elevated);border-radius:2px;margin:0 10px;overflow:hidden;}
+.yb-bar{height:100%;background:var(--accent-green);border-radius:2px;opacity:.6;}
+
+.fav-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.fav-cover{aspect-ratio:2/3;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;transition:transform .2s;}
+.fav-cover:hover{transform:scale(1.03);}
+
+.genre-breakdown{display:flex;flex-direction:column;gap:8px;}
+.gb-item{display:flex;align-items:center;justify-content:space-between;}
+.gb-genre{font-size:13px;color:var(--text-secondary);}
+.gb-pct{font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace;}
+.gb-bar-wrap{flex:1;height:4px;background:var(--bg-elevated);border-radius:2px;margin:0 10px;}
+.gb-bar{height:100%;background:var(--accent-green);border-radius:2px;}
+
+
+/* ════════════════════════════════════════
+   ── LOGIN PAGE ──
+════════════════════════════════════════ */
+#page-login{
+  display:none;
+  background:var(--bg-primary);
+  min-height:100vh;
+  padding-top:0 !important;
+}
+#page-login.active{display:grid;grid-template-columns:1fr 1fr;}
+
+.login-visual{
+  position:relative;overflow:hidden;
+  background:#0a120e;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:48px;min-height:100vh;
+}
+.login-visual-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 30%,rgba(0,200,117,.12),transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 80%,rgba(0,100,50,.1),transparent 70%);
+}
+.login-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,200,117,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,117,.04) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.login-books-visual{
+  position:absolute;top:0;right:0;bottom:0;left:0;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.lbv-spine{
+  position:absolute;width:38px;border-radius:3px 6px 6px 3px;
+  box-shadow:3px 3px 12px rgba(0,0,0,.7);
+  display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;
+  font-family:'Playfair Display',serif;font-size:7px;font-weight:700;letter-spacing:1px;
+  color:rgba(255,255,255,.5);padding:10px 3px;
+}
+.lbv1{height:220px;background:linear-gradient(180deg,#1a472a,#0d2818);left:50%;transform:translateX(-50%) rotate(-5deg);top:15%;}
+.lbv2{height:260px;background:linear-gradient(180deg,#6b2737,#3d1420);left:38%;transform:translateX(-50%) rotate(-2deg);top:10%;}
+.lbv3{height:240px;background:linear-gradient(180deg,#1c3a5e,#0a1f3a);left:62%;transform:translateX(-50%) rotate(4deg);top:12%;}
+.lbv4{height:200px;background:linear-gradient(180deg,#4a2d00,#2a1a00);left:30%;transform:translateX(-50%) rotate(-8deg);top:20%;}
+.lbv5{height:230px;background:linear-gradient(180deg,#2d1b4e,#180f2e);left:70%;transform:translateX(-50%) rotate(8deg);top:18%;}
+
+.login-quote{position:relative;z-index:2;}
+.login-quote blockquote{
+  font-family:'Playfair Display',serif;font-size:22px;font-style:italic;
+  line-height:1.5;color:var(--text-primary);margin-bottom:12px;
+  text-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+.login-quote cite{font-size:12px;color:var(--text-muted);font-style:normal;font-family:'DM Mono',monospace;letter-spacing:.5px;}
+
+.login-form-side{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:48px;background:var(--bg-primary);min-height:100vh;
+}
+.login-form-box{width:100%;max-width:400px;}
+.login-logo{
+  font-family:'Playfair Display',serif;font-size:26px;font-weight:900;
+  letter-spacing:-.5px;display:flex;align-items:center;gap:8px;
+  margin-bottom:40px;cursor:pointer;
+}
+.login-heading{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px;}
+.login-subheading{color:var(--text-secondary);font-size:14px;margin-bottom:36px;}
+
+.auth-tabs{display:flex;gap:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;margin-bottom:28px;}
+.auth-tab{
+  flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;color:var(--text-muted);
+  cursor:pointer;border-radius:6px;transition:all .2s;border:none;background:none;font-family:'DM Sans',sans-serif;
+}
+.auth-tab.active{background:var(--bg-elevated);color:var(--text-primary);box-shadow:0 1px 4px rgba(0,0,0,.3);}
+
+.login-form .form-group{margin-bottom:16px;}
+.login-form .form-label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;}
+.login-form .form-input{
+  width:100%;background:var(--bg-card);border:1px solid var(--border-light);
+  border-radius:var(--radius-sm);padding:12px 16px;font-size:14px;
+  color:var(--text-primary);outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.login-form .form-input:focus{border-color:var(--accent-green);box-shadow:0 0 0 3px rgba(0,200,117,.08);}
+.login-form .form-input::placeholder{color:var(--text-muted);}
+
+.login-extras{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.login-remember{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-secondary);cursor:pointer;}
+.login-remember input{accent-color:var(--accent-green);}
+.login-forgot{font-size:13px;color:var(--text-muted);cursor:pointer;transition:color .2s;}
+.login-forgot:hover{color:var(--accent-green);}
+
+.btn-login-full{
+  width:100%;padding:13px;background:var(--accent-green);color:#0d0f0e;
+  border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;
+  cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;letter-spacing:.2px;
+}
+.btn-login-full:hover{background:#00e085;box-shadow:0 0 24px rgba(0,200,117,.3);}
+
+.login-divider{
+  display:flex;align-items:center;gap:12px;margin:20px 0;
+  font-size:12px;color:var(--text-muted);
+}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.btn-social{
+  width:100%;padding:11px;background:var(--bg-card);border:1px solid var(--border-light);
+  border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--text-secondary);
+  cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-social:hover{border-color:var(--text-muted);color:var(--text-primary);}
+
+.login-footer-text{text-align:center;margin-top:24px;font-size:13px;color:var(--text-muted);}
+.login-footer-text a{color:var(--accent-green);font-weight:600;}
+.login-footer-text a:hover{text-decoration:underline;}
+
+.login-policy{text-align:center;margin-top:16px;font-size:11px;color:var(--text-muted);line-height:1.6;}
+.login-policy a{color:var(--text-muted);text-decoration:underline;}
+
+/* signup fields hidden/shown */
+.signup-only{display:none;}
+.signup-only.show{display:block;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     NAV (shared, always visible except login)
+══════════════════════════════════════ -->
+<nav id="main-nav">
+  <a class="nav-logo" onclick="navigate('home')">
+    <span class="nav-dot"></span>LitTheatre
+  </a>
+  <ul class="nav-links">
+    <li><a onclick="navigate('home')" id="nav-home">Home</a></li>
+    <li><a href="#" id="nav-films">Films</a></li>
+    <li><a href="#" id="nav-lists">Lists</a></li>
+    <li><a onclick="navigate('log')" id="nav-log">Log Book</a></li>
+    <li><a href="#" id="nav-members">Members</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="search-bar">
+      <span class="search-icon">⌕</span>
+      <input type="text" placeholder="Books, authors, members…">
+    </div>
+    <button class="btn btn-outline" onclick="navigate('login')">Sign in</button>
+    <button class="btn btn-primary" onclick="navigate('login')">Create account</button>
+    <div class="nav-avatar" onclick="navigate('profile')">S</div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     HOME PAGE
+══════════════════════════════════════ -->
+<div id="page-home" class="page active">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-inner">
+      <div class="fade-up">
+        <div class="hero-label"><span class="nav-dot" style="width:5px;height:5px"></span>Social reading, reimagined</div>
+        <h1 class="hero-h">Track every book<br>you've ever <em>loved.</em></h1>
+        <p class="hero-sub">LitTheatre is the home for readers. Log, rate, and review every book you read. Discover what friends are reading. Build your literary identity.</p>
+        <div class="hero-cta">
+          <button class="btn btn-primary" onclick="navigate('login')">Get started — it's free</button>
+          <button class="btn btn-outline">Explore books</button>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><div class="stat-num">2.4M</div><div class="stat-label">Members</div></div>
+          <div class="stat"><div class="stat-num">18M</div><div class="stat-label">Books logged</div></div>
+          <div class="stat"><div class="stat-num">4.1M</div><div class="stat-label">Reviews</div></div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="book-spine bs6">PROUST</div>
+        <div class="book-spine bs4">AUSTEN</div>
+        <div class="book-spine bs2">DOSTOEVSKY</div>
+        <div class="book-spine bs1">KAFKA<br>COMPLETE</div>
+        <div class="book-spine bs3">TOLSTOY</div>
+        <div class="book-spine bs5">BORGES</div>
+        <div class="book-spine bs7">WOOLF</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CURRENTLY READING BAR -->
+  <div class="cr-bar">
+    <span class="cr-label">Now reading</span>
+    <div class="cr-divider"></div>
+    <div class="cr-scroll">
+      <div class="cr-item"><div class="cr-cover bc1"></div><span class="cr-text"><strong>priya_reads</strong> — The Brothers Karamazov</span></div>
+      <div class="cr-item"><div class="cr-cover bc3"></div><span class="cr-text"><strong>bookish_dan</strong> — Piranesi</span></div>
+      <div class="cr-item"><div class="cr-cover bc2"></div><span class="cr-text"><strong>literaryleo</strong> — Normal People</span></div>
+      <div class="cr-item"><div class="cr-cover bc5"></div><span class="cr-text"><strong>maya_liu</strong> — A Little Life</span></div>
+      <div class="cr-item"><div class="cr-cover bc4"></div><span class="cr-text"><strong>readingwren</strong> — Pachinko</span></div>
+      <div class="cr-item"><div class="cr-cover bc6"></div><span class="cr-text"><strong>haruki_fan</strong> — Norwegian Wood</span></div>
+      <div class="cr-item"><div class="cr-cover bc7"></div><span class="cr-text"><strong>classics_only</strong> — Middlemarch</span></div>
+    </div>
+  </div>
+
+  <!-- POPULAR BOOKS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-title">Popular this week</span>
+      <a href="#" class="section-link">Browse all →</a>
+    </div>
+    <div class="books-grid">
+      <div class="book-card"><div class="book-cover bc1"><div class="book-cover-placeholder">THE MIDNIGHT LIBRARY</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">The Midnight Library</div><div class="book-author-s">Matt Haig</div><div class="book-rating-s"><span class="stars-filled">★★★★</span><span class="rating-count">128k</span></div></div></div>
+      <div class="book-card"><div class="book-cover bc2"><div class="book-cover-placeholder">FOURTH WING</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">Fourth Wing</div><div class="book-author-s">Rebecca Yarros</div><div class="book-rating-s"><span class="stars-filled">★★★★</span><span class="rating-count">94k</span></div></div></div>
+      <div class="book-card"><div class="book-cover bc3"><div class="book-cover-placeholder">INTERMEZZO</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">Intermezzo</div><div class="book-author-s">Sally Rooney</div><div class="book-rating-s"><span class="stars-filled">★★★★★</span><span class="rating-count">71k</span></div></div></div>
+      <div class="book-card"><div class="book-cover bc4"><div class="book-cover-placeholder">JAMES</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">James</div><div class="book-author-s">Percival Everett</div><div class="book-rating-s"><span class="stars-filled">★★★★★</span><span class="rating-count">58k</span></div></div></div>
+      <div class="book-card"><div class="book-cover bc5"><div class="book-cover-placeholder">DEMON COPPERHEAD</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">Demon Copperhead</div><div class="book-author-s">Barbara Kingsolver</div><div class="book-rating-s"><span class="stars-filled">★★★★</span><span class="rating-count">43k</span></div></div></div>
+      <div class="book-card"><div class="book-cover bc6"><div class="book-cover-placeholder">ORBITAL</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">Orbital</div><div class="book-author-s">Samantha Harvey</div><div class="book-rating-s"><span class="stars-filled">★★★★</span><span class="rating-count">38k</span></div></div></div>
+      <div class="book-card"><div class="book-cover bc7"><div class="book-cover-placeholder">THE GOD OF THE WOODS</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">The God of the Woods</div><div class="book-author-s">Liz Moore</div><div class="book-rating-s"><span class="stars-filled">★★★★</span><span class="rating-count">31k</span></div></div></div>
+      <div class="book-card"><div class="book-cover bc8"><div class="book-cover-placeholder">ALL FOURS</div><div class="book-overlay"><div class="quick-rate"><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span><span class="qs">★</span></div></div></div><div class="book-meta"><div class="book-title-s">All Fours</div><div class="book-author-s">Miranda July</div><div class="book-rating-s"><span class="stars-filled">★★★</span><span class="rating-count">27k</span></div></div></div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY FEED + SIDEBAR -->
+  <div class="section" style="padding-top:0">
+    <div class="feed-layout">
+      <div>
+        <div class="section-header">
+          <span class="section-title">Friend activity</span>
+          <a href="#" class="section-link">Following · You →</a>
+        </div>
+        <div class="activity-list">
+          <div class="activity-item">
+            <div class="a-avatar" style="background:linear-gradient(135deg,#1c5e3a,#0d2e1a);color:#00c875">P</div>
+            <div class="a-body">
+              <div class="a-text"><strong>priya_reads</strong> rated <a href="#">The Brothers Karamazov</a> and wrote a review</div>
+              <div class="a-book-mini"><div class="mini-cover bc1"></div><div class="mini-info"><div class="mini-title">The Brothers Karamazov</div><div class="mini-author">Fyodor Dostoevsky · ★★★★★</div></div></div>
+              <div class="review-quote">"Dostoevsky doesn't write characters — he excavates them. Every page is a reckoning. I've never felt so simultaneously destroyed and elevated by a novel."</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="a-time">2 hours ago</span><span style="color:var(--text-muted);font-size:11px">♥ 24 likes</span><span style="color:var(--text-muted);font-size:11px">💬 8 comments</span></div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="a-avatar" style="background:linear-gradient(135deg,#1c3a5e,#0a1f3a);color:#6ab0ff">D</div>
+            <div class="a-body">
+              <div class="a-text"><strong>bookish_dan</strong> added <a href="#">Piranesi</a> to his watchlist and is now reading it</div>
+              <div class="a-book-mini"><div class="mini-cover bc3"></div><div class="mini-info"><div class="mini-title">Piranesi</div><div class="mini-author">Susanna Clarke</div></div></div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="a-time">5 hours ago</span><span style="color:var(--text-muted);font-size:11px">♥ 7 likes</span></div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="a-avatar" style="background:linear-gradient(135deg,#5e1c3a,#2e0a1f);color:#ff6ab0">M</div>
+            <div class="a-body">
+              <div class="a-text"><strong>maya_liu</strong> logged 3 books — <a href="#">Normal People</a>, <a href="#">Conversations with Friends</a>, and <a href="#">Beautiful World, Where Are You</a></div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <div class="mini-cover bc2" style="width:28px;height:42px;border-radius:3px;border:1px solid var(--border)"></div>
+                <div class="mini-cover bc5" style="width:28px;height:42px;border-radius:3px;border:1px solid var(--border)"></div>
+                <div class="mini-cover bc7" style="width:28px;height:42px;border-radius:3px;border:1px solid var(--border)"></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="a-time">Yesterday</span><span style="color:var(--text-muted);font-size:11px">♥ 31 likes</span></div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="a-avatar" style="background:linear-gradient(135deg,#3a3a1c,#1f1f0a);color:#c8c800">L</div>
+            <div class="a-body">
+              <div class="a-text"><strong>literaryleo</strong> created a new list — <a href="#">"Books that broke me (in the best way)"</a></div>
+              <div style="display:flex;gap:6px;margin-top:8px;align-items:center"><span class="tag">list</span><span style="font-size:12px;color:var(--text-muted)">12 books · public</span></div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="a-time">2 days ago</span><span style="color:var(--text-muted);font-size:11px">♥ 89 likes</span></div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="a-avatar" style="background:linear-gradient(135deg,#2d1b4e,#180f2e);color:#a06bff">R</div>
+            <div class="a-body">
+              <div class="a-text"><strong>readingwren</strong> gave <a href="#">Pachinko</a> <span style="color:var(--accent-amber)">★★★★★</span> — a rare 5 stars</div>
+              <div class="a-book-mini"><div class="mini-cover bc4"></div><div class="mini-info"><div class="mini-title">Pachinko</div><div class="mini-author">Min Jin Lee</div></div></div>
+              <div class="review-quote">"Every generation carries its wounds quietly. This book is a monument to that silence — and to those who broke it."</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="a-time">3 days ago</span><span style="color:var(--text-muted);font-size:11px">♥ 156 likes</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="widget">
+          <div class="widget-title">2025 Reading Challenge</div>
+          <div class="challenge-goal"><span class="challenge-count">18</span><span class="challenge-total">/ 36 books</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+          <div class="challenge-label">50% complete · on track ✓</div>
+        </div>
+        <div class="widget">
+          <div class="widget-title">Browse by genre</div>
+          <div class="genre-tags">
+            <span class="genre-tag active">Literary Fiction</span><span class="genre-tag">Science Fiction</span>
+            <span class="genre-tag">Mystery</span><span class="genre-tag">Fantasy</span>
+            <span class="genre-tag">Historical</span><span class="genre-tag">Non-Fiction</span>
+            <span class="genre-tag">Romance</span><span class="genre-tag">Horror</span>
+            <span class="genre-tag">Classics</span><span class="genre-tag">Memoir</span>
+          </div>
+        </div>
+        <div class="widget">
+          <div class="widget-title">Readers to follow</div>
+          <div class="u-suggest"><div class="u-sug-av" style="background:linear-gradient(135deg,#3a1a1a,#220e0e);color:#ff9b9b">S</div><div style="flex:1"><div class="u-sug-name">sarah_reads</div><div class="u-sug-books">312 books · literary fiction</div></div><button class="btn-follow">Follow</button></div>
+          <div class="u-suggest"><div class="u-sug-av" style="background:linear-gradient(135deg,#1a3a1a,#0e220e);color:#9bffb0">J</div><div style="flex:1"><div class="u-sug-name">jorge_b</div><div class="u-sug-books">847 books · classics</div></div><button class="btn-follow">Follow</button></div>
+          <div class="u-suggest"><div class="u-sug-av" style="background:linear-gradient(135deg,#1a1a3a,#0e0e22);color:#9bb0ff">N</div><div style="flex:1"><div class="u-sug-name">nonfic_nina</div><div class="u-sug-books">204 books · non-fiction</div></div><button class="btn-follow">Follow</button></div>
+          <div class="u-suggest"><div class="u-sug-av" style="background:linear-gradient(135deg,#3a2a1a,#22180e);color:#ffd09b">K</div><div style="flex:1"><div class="u-sug-name">kiran_sf</div><div class="u-sug-books">589 books · sci-fi</div></div><button class="btn-follow">Follow</button></div>
+        </div>
+        <div class="widget">
+          <div class="widget-title">Trending lists</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="cursor:pointer"><div style="font-size:13px;font-weight:600;margin-bottom:2px">Books to read before 30</div><div style="font-size:11px;color:var(--text-muted)">by midnight_reader · 25 books</div></div>
+            <div style="cursor:pointer"><div style="font-size:13px;font-weight:600;margin-bottom:2px">Nobel Prize winners, ranked</div><div style="font-size:11px;color:var(--text-muted)">by literaryleo · 118 books</div></div>
+            <div style="cursor:pointer"><div style="font-size:13px;font-weight:600;margin-bottom:2px">Translated fiction essentials</div><div style="font-size:11px;color:var(--text-muted)">by world_lit · 40 books</div></div>
+            <div style="cursor:pointer"><div style="font-size:13px;font-weight:600;margin-bottom:2px">Booker Prize winners tier list</div><div style="font-size:11px;color:var(--text-muted)">by bookish_dan · 62 books</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPULAR REVIEWS -->
+  <div class="section" style="border-top:1px solid var(--border);padding-top:56px">
+    <div class="section-header"><span class="section-title">Popular reviews this week</span><a href="#" class="section-link">All reviews →</a></div>
+    <div class="reviews-grid">
+      <div class="review-card">
+        <div class="rc-header"><div class="rc-book-cover bc3"></div><div><div class="rc-book-title">Intermezzo</div><div class="rc-book-author">Sally Rooney, 2024</div><div class="rc-user"><div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#1c5e3a,#0d2e1a);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#00c875">P</div>priya_reads<span class="rc-user-dot">·</span><span class="rc-stars">★★★★★</span></div><span class="badge" style="margin-top:6px">⭑ Popular</span></div></div>
+        <div class="rc-text">Rooney is at her finest here. Peter and Ivan are drawn with the kind of careful attention she reserves for people who are too intelligent to be happy. The prose is immaculate — cool and surgical but always humming with feeling underneath.</div>
+        <div class="rc-footer"><span class="rc-likes">♥ 412 likes</span><span class="rc-date">Jan 14, 2025</span></div>
+      </div>
+      <div class="review-card">
+        <div class="rc-header"><div class="rc-book-cover bc4"></div><div><div class="rc-book-title">Pachinko</div><div class="rc-book-author">Min Jin Lee, 2017</div><div class="rc-user"><div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#2d1b4e,#180f2e);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#a06bff">R</div>readingwren<span class="rc-user-dot">·</span><span class="rc-stars">★★★★★</span></div><span class="badge" style="margin-top:6px">⭑ Popular</span></div></div>
+        <div class="rc-text">Four generations. One family. A century of history, discrimination, war, and quiet dignity. Min Jin Lee writes like a historian who has been waiting their whole life to tell you this story. I cried three separate times.</div>
+        <div class="rc-footer"><span class="rc-likes">♥ 318 likes</span><span class="rc-date">Dec 28, 2024</span></div>
+      </div>
+      <div class="review-card">
+        <div class="rc-header"><div class="rc-book-cover bc5"></div><div><div class="rc-book-title">A Little Life</div><div class="rc-book-author">Hanya Yanagihara, 2015</div><div class="rc-user"><div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#5e1c3a,#2e0a1f);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#ff6ab0">M</div>maya_liu<span class="rc-user-dot">·</span><span class="rc-stars">★★★★★</span></div></div></div>
+        <div class="rc-text">There are books that are experiences rather than stories, and this is one of them. The tenderness with which Yanagihara treats Jude's pain is almost unbearable. You must be prepared to be utterly undone.</div>
+        <div class="rc-footer"><span class="rc-likes">♥ 287 likes</span><span class="rc-date">Jan 2, 2025</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><a class="nav-logo" onclick="navigate('home')"><span class="nav-dot"></span>LitTheatre</a><p class="footer-desc">The social platform for readers. Track every book you've read, share your literary journey, and discover what to read next.</p></div>
+      <div><div class="footer-col-title">Explore</div><ul class="footer-links"><li><a href="#">Popular books</a></li><li><a href="#">New releases</a></li><li><a href="#">Top lists</a></li><li><a href="#">Genres</a></li><li><a href="#">Awards</a></li></ul></div>
+      <div><div class="footer-col-title">Community</div><ul class="footer-links"><li><a href="#">Members</a></li><li><a href="#">Reviews</a></li><li><a href="#">Reading groups</a></li><li><a href="#">Journal</a></li></ul></div>
+      <div><div class="footer-col-title">Company</div><ul class="footer-links"><li><a href="#">About</a></li><li><a href="#">API</a></li><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul></div>
+    </div>
+    <div class="footer-bottom"><span>© 2025 LitTheatre. All rights reserved.</span><span style="font-family:'DM Mono',monospace">v1.0.0-beta</span></div>
+  </div>
+</div><!-- /home -->
+
+
+<!-- ══════════════════════════════════════
+     LOG BOOK PAGE
+══════════════════════════════════════ -->
+<div id="page-log" class="page">
+  <div class="log-page-wrap">
+
+    <div class="log-page-header fade-up">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div class="hero-label" style="margin-bottom:0"><span class="nav-dot" style="width:5px;height:5px"></span>Your library</div>
+      </div>
+      <h1 class="log-page-title">Log a book</h1>
+      <p class="log-page-sub">Search for any book, set your reading status, rate it, and write a review.</p>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="log-search-big fade-up">
+      <input class="log-search-input" type="text" placeholder="Search by title, author, or ISBN…" id="bookSearchInput">
+      <button class="btn-search">Search</button>
+    </div>
+
+    <!-- SEARCH RESULTS -->
+    <div class="search-results fade-up">
+      <div class="search-result-item">
+        <div class="sr-cover bc3"></div>
+        <div class="sr-info"><div class="sr-title">Intermezzo</div><div class="sr-author">Sally Rooney</div><div class="sr-year">2024 · Fiction</div></div>
+        <button class="sr-select" onclick="selectBook('Intermezzo', 'Sally Rooney')">Select</button>
+      </div>
+      <div class="search-result-item">
+        <div class="sr-cover bc1"></div>
+        <div class="sr-info"><div class="sr-title">Intermezzo</div><div class="sr-author">Gyula Illyés (tr. from Hungarian)</div><div class="sr-year">1993 · Poetry</div></div>
+        <button class="sr-select" onclick="selectBook('Intermezzo', 'Gyula Illyés')">Select</button>
+      </div>
+      <div class="search-result-item">
+        <div class="sr-cover bc6"></div>
+        <div class="sr-info"><div class="sr-title">Intermezzo: A Novel</div><div class="sr-author">Sally Rooney (Special Edition)</div><div class="sr-year">2024 · Literary Fiction</div></div>
+        <button class="sr-select" onclick="selectBook('Intermezzo: A Novel', 'Sally Rooney')">Select</button>
+      </div>
+    </div>
+
+    <!-- LOG FORM -->
+    <div class="log-form fade-up" id="log-form-card">
+      <div class="log-form-title">Log your entry</div>
+      <div class="log-form-book">Logging: <span id="selected-book-name">Intermezzo by Sally Rooney</span></div>
+
+      <div class="status-tabs" id="status-tabs">
+        <button class="status-tab active">Read</button>
+        <button class="status-tab">Currently Reading</button>
+        <button class="status-tab">Want to Read</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Your rating</label>
+        <div class="star-rating-big" id="star-rating">
+          <button class="star-btn-big active">★</button>
+          <button class="star-btn-big active">★</button>
+          <button class="star-btn-big active">★</button>
+          <button class="star-btn-big active">★</button>
+          <button class="star-btn-big">★</button>
+          <span class="rating-label" id="rating-label">4 stars — Really liked it</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Your review <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(optional)</span></label>
+        <textarea class="form-textarea" placeholder="What did you think? Share your thoughts — no spoilers unless you check the box below…" rows="5"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Date started</label>
+          <input class="form-input" type="text" placeholder="Month Year">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Date finished</label>
+          <input class="form-input" type="text" placeholder="Month Year" value="January 2025">
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <div class="form-check"><input type="checkbox" id="spoiler-cb"><label for="spoiler-cb">This review contains spoilers</label></div>
+        <div class="form-check"><input type="checkbox" id="private-cb"><label for="private-cb">Keep this entry private</label></div>
+        <div class="form-check"><input type="checkbox" id="reread-cb"><label for="reread-cb">This is a re-read</label></div>
+      </div>
+
+      <div class="form-group" style="margin-top:20px">
+        <label class="form-label">Tags <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(optional)</span></label>
+        <input class="form-input" type="text" placeholder="e.g. literary-fiction, favourites, 2025-reads">
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-ghost">Clear form</button>
+        <div class="form-actions-right">
+          <button class="btn btn-outline">Save draft</button>
+          <button class="btn btn-primary" onclick="showSaveToast()">Save entry →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECENTLY LOGGED -->
+    <div style="margin-top:48px">
+      <div class="section-header" style="margin-bottom:20px">
+        <span class="section-title" style="font-size:18px">Recently logged</span>
+        <a href="#" class="section-link">View diary →</a>
+      </div>
+      <div class="logged-grid">
+        <div class="logged-item"><div class="logged-cover bc1"></div><div class="logged-info"><div class="logged-title">The Brothers Karamazov</div><div class="logged-author">Fyodor Dostoevsky</div><div class="logged-rating">★★★★★</div><div class="logged-date">Finished Jan 10, 2025</div></div><span class="logged-status ls-read">Read</span></div>
+        <div class="logged-item"><div class="logged-cover bc5"></div><div class="logged-info"><div class="logged-title">A Little Life</div><div class="logged-author">Hanya Yanagihara</div><div class="logged-rating">★★★★★</div><div class="logged-date">Finished Dec 28, 2024</div></div><span class="logged-status ls-read">Read</span></div>
+        <div class="logged-item"><div class="logged-cover bc7"></div><div class="logged-info"><div class="logged-title">Middlemarch</div><div class="logged-author">George Eliot</div><div class="logged-rating">★★★★</div><div class="logged-date">Started Jan 15, 2025</div></div><span class="logged-status ls-reading">Reading</span></div>
+        <div class="logged-item"><div class="logged-cover bc2"></div><div class="logged-info"><div class="logged-title">The Secret History</div><div class="logged-author">Donna Tartt</div><div class="logged-rating">—</div><div class="logged-date">Added Jan 8, 2025</div></div><span class="logged-status ls-want">Want to Read</span></div>
+        <div class="logged-item"><div class="logged-cover bc4"></div><div class="logged-info"><div class="logged-title">Pachinko</div><div class="logged-author">Min Jin Lee</div><div class="logged-rating">★★★★★</div><div class="logged-date">Finished Nov 14, 2024</div></div><span class="logged-status ls-read">Read</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><a class="nav-logo" onclick="navigate('home')"><span class="nav-dot"></span>LitTheatre</a><p class="footer-desc">Track every book you've read, share your literary journey, and discover what to read next.</p></div>
+      <div><div class="footer-col-title">Explore</div><ul class="footer-links"><li><a href="#">Popular books</a></li><li><a href="#">New releases</a></li><li><a href="#">Top lists</a></li><li><a href="#">Genres</a></li></ul></div>
+      <div><div class="footer-col-title">Community</div><ul class="footer-links"><li><a href="#">Members</a></li><li><a href="#">Reviews</a></li><li><a href="#">Reading groups</a></li></ul></div>
+      <div><div class="footer-col-title">Company</div><ul class="footer-links"><li><a href="#">About</a></li><li><a href="#">API</a></li><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul></div>
+    </div>
+    <div class="footer-bottom"><span>© 2025 LitTheatre. All rights reserved.</span><span style="font-family:'DM Mono',monospace">v1.0.0-beta</span></div>
+  </div>
+</div><!-- /log -->
+
+
+<!-- ══════════════════════════════════════
+     PROFILE PAGE
+══════════════════════════════════════ -->
+<div id="page-profile" class="page">
+
+  <!-- BANNER -->
+  <div class="profile-banner-big"></div>
+
+  <!-- PROFILE HEADER -->
+  <div style="background:var(--bg-primary);border-bottom:1px solid var(--border)">
+    <div class="profile-header-row">
+      <div class="profile-avatar-xl">S</div>
+      <div class="profile-id">
+        <div class="profile-name">Shivam</div>
+        <div class="profile-handle">@shvm59</div>
+        <div class="profile-bio">Literary fiction devotee. Dostoevsky, Woolf, Ishiguro. Working through every Booker Prize winner. Pune, India.</div>
+      </div>
+      <div class="profile-actions">
+        <button class="btn btn-outline">Edit profile</button>
+        <button class="btn btn-primary" onclick="navigate('log')">+ Log book</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE NAV TABS -->
+  <div class="profile-nav">
+    <div class="profile-nav-inner">
+      <button class="profile-tab active" onclick="switchProfileTab(this,'tab-overview')">Overview</button>
+      <button class="profile-tab" onclick="switchProfileTab(this,'tab-diary')">Diary</button>
+      <button class="profile-tab" onclick="switchProfileTab(this,'tab-reviews')">Reviews</button>
+      <button class="profile-tab" onclick="switchProfileTab(this,'tab-lists')">Lists</button>
+      <button class="profile-tab" onclick="switchProfileTab(this,'tab-watchlist')">Watchlist</button>
+      <button class="profile-tab" onclick="switchProfileTab(this,'tab-network')">Network</button>
+    </div>
+  </div>
+
+  <!-- TAB: OVERVIEW -->
+  <div id="tab-overview" class="profile-tab-content">
+    <div class="profile-body">
+      <div>
+        <!-- STATS ROW -->
+        <div class="profile-stats-grid">
+          <div class="profile-stat-box"><div class="psb-num">284</div><div class="psb-label">Books</div></div>
+          <div class="profile-stat-box"><div class="psb-num">41</div><div class="psb-label">Reviews</div></div>
+          <div class="profile-stat-box"><div class="psb-num">18</div><div class="psb-label">Lists</div></div>
+          <div class="profile-stat-box"><div class="psb-num">312</div><div class="psb-label">Followers</div></div>
+          <div class="profile-stat-box"><div class="psb-num">148</div><div class="psb-label">Following</div></div>
+        </div>
+
+        <!-- RECENT READS -->
+        <div class="section-header" style="margin-bottom:16px">
+          <span class="section-title" style="font-size:18px">Recent reads</span>
+          <a href="#" class="section-link" onclick="switchProfileTab(document.querySelector('.profile-tab'),'tab-diary')">View diary →</a>
+        </div>
+        <div class="recent-reads-row" style="margin-bottom:32px">
+          <div class="r-cover bc1" style="width:64px;height:96px"></div>
+          <div class="r-cover bc5" style="width:64px;height:96px"></div>
+          <div class="r-cover bc7" style="width:64px;height:96px"></div>
+          <div class="r-cover bc3" style="width:64px;height:96px"></div>
+          <div class="r-cover bc2" style="width:64px;height:96px"></div>
+          <div class="r-cover bc4" style="width:64px;height:96px"></div>
+          <div class="r-cover bc6" style="width:64px;height:96px"></div>
+        </div>
+
+        <!-- RATING DISTRIBUTION -->
+        <div class="section-header" style="margin-bottom:16px"><span class="section-title" style="font-size:18px">Rating distribution</span></div>
+        <div class="rating-chart">
+          <div class="rating-row"><span class="rating-label-s">5★</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:48%"></div></div><span class="rating-count-s">136</span></div>
+          <div class="rating-row"><span class="rating-label-s">4★</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:32%"></div></div><span class="rating-count-s">91</span></div>
+          <div class="rating-row"><span class="rating-label-s">3★</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:14%"></div></div><span class="rating-count-s">39</span></div>
+          <div class="rating-row"><span class="rating-label-s">2★</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:5%"></div></div><span class="rating-count-s">13</span></div>
+          <div class="rating-row"><span class="rating-label-s">1★</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:2%"></div></div><span class="rating-count-s">5</span></div>
+        </div>
+
+        <!-- RECENT REVIEWS -->
+        <div class="section-header" style="margin-bottom:16px;margin-top:32px"><span class="section-title" style="font-size:18px">Recent reviews</span><a href="#" class="section-link">All reviews →</a></div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="review-card">
+            <div class="rc-header"><div class="rc-book-cover bc1"></div><div><div class="rc-book-title">The Brothers Karamazov</div><div class="rc-book-author">Fyodor Dostoevsky, 1880</div><div class="rc-stars">★★★★★</div></div></div>
+            <div class="rc-text">Dostoevsky doesn't write characters — he excavates them. Every page is a reckoning with the deepest questions of human existence: faith, free will, guilt, love. Ivan Karamazov's Grand Inquisitor chapter alone is worth the 800 pages.</div>
+            <div class="rc-footer"><span class="rc-likes">♥ 24 likes</span><span class="rc-date">Jan 10, 2025</span></div>
+          </div>
+          <div class="review-card">
+            <div class="rc-header"><div class="rc-book-cover bc5"></div><div><div class="rc-book-title">A Little Life</div><div class="rc-book-author">Hanya Yanagihara, 2015</div><div class="rc-stars">★★★★★</div></div></div>
+            <div class="rc-text">I finished this on a Sunday afternoon and sat in silence for an hour. Yanagihara asks you to witness pain without looking away, and somehow that act of witnessing becomes its own form of grace.</div>
+            <div class="rc-footer"><span class="rc-likes">♥ 18 likes</span><span class="rc-date">Dec 28, 2024</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="profile-sidebar">
+        <!-- Favourite books -->
+        <div class="widget">
+          <div class="widget-title">Favourite books</div>
+          <div class="fav-grid">
+            <div class="fav-cover bc1"></div>
+            <div class="fav-cover bc5"></div>
+            <div class="fav-cover bc3"></div>
+            <div class="fav-cover bc7"></div>
+          </div>
+        </div>
+
+        <!-- Reading by year -->
+        <div class="widget">
+          <div class="widget-title">Books by year</div>
+          <div class="year-breakdown">
+            <div class="yb-item"><span class="yb-year">2025</span><div class="yb-bar-wrap"><div class="yb-bar" style="width:18%"></div></div><span class="yb-count">18</span></div>
+            <div class="yb-item"><span class="yb-year">2024</span><div class="yb-bar-wrap"><div class="yb-bar" style="width:72%"></div></div><span class="yb-count">72</span></div>
+            <div class="yb-item"><span class="yb-year">2023</span><div class="yb-bar-wrap"><div class="yb-bar" style="width:65%"></div></div><span class="yb-count">65</span></div>
+            <div class="yb-item"><span class="yb-year">2022</span><div class="yb-bar-wrap"><div class="yb-bar" style="width:58%"></div></div><span class="yb-count">58</span></div>
+            <div class="yb-item"><span class="yb-year">2021</span><div class="yb-bar-wrap"><div class="yb-bar" style="width:42%"></div></div><span class="yb-count">42</span></div>
+          </div>
+        </div>
+
+        <!-- Genre breakdown -->
+        <div class="widget">
+          <div class="widget-title">Top genres</div>
+          <div class="genre-breakdown">
+            <div class="gb-item"><span class="gb-genre">Literary Fiction</span><div class="gb-bar-wrap"><div class="gb-bar" style="width:78%"></div></div><span class="gb-pct">78%</span></div>
+            <div class="gb-item"><span class="gb-genre">Classics</span><div class="gb-bar-wrap"><div class="gb-bar" style="width:52%"></div></div><span class="gb-pct">52%</span></div>
+            <div class="gb-item"><span class="gb-genre">Historical</span><div class="gb-bar-wrap"><div class="gb-bar" style="width:28%"></div></div><span class="gb-pct">28%</span></div>
+            <div class="gb-item"><span class="gb-genre">Non-Fiction</span><div class="gb-bar-wrap"><div class="gb-bar" style="width:18%"></div></div><span class="gb-pct">18%</span></div>
+            <div class="gb-item"><span class="gb-genre">Sci-Fi</span><div class="gb-bar-wrap"><div class="gb-bar" style="width:10%"></div></div><span class="gb-pct">10%</span></div>
+          </div>
+        </div>
+
+        <!-- Reading challenge -->
+        <div class="widget">
+          <div class="widget-title">2025 Challenge</div>
+          <div class="challenge-goal"><span class="challenge-count">18</span><span class="challenge-total">/ 36</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+          <div class="challenge-label">On track — 50% complete ✓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: DIARY (hidden by default) -->
+  <div id="tab-diary" class="profile-tab-content" style="display:none">
+    <div style="max-width:1200px;margin:0 auto;padding:32px 40px">
+      <div class="section-header"><span class="section-title">Reading diary — 2025</span></div>
+      <div class="logged-grid">
+        <div class="logged-item"><div class="logged-cover bc1"></div><div class="logged-info"><div class="logged-title">The Brothers Karamazov</div><div class="logged-author">Fyodor Dostoevsky</div><div class="logged-rating">★★★★★</div><div class="logged-date">Finished Jan 10, 2025</div></div><span class="logged-status ls-read">Read</span></div>
+        <div class="logged-item"><div class="logged-cover bc5"></div><div class="logged-info"><div class="logged-title">A Little Life</div><div class="logged-author">Hanya Yanagihara</div><div class="logged-rating">★★★★★</div><div class="logged-date">Finished Dec 28, 2024</div></div><span class="logged-status ls-read">Read</span></div>
+        <div class="logged-item"><div class="logged-cover bc7"></div><div class="logged-info"><div class="logged-title">Middlemarch</div><div class="logged-author">George Eliot</div><div class="logged-rating">★★★★</div><div class="logged-date">Currently reading</div></div><span class="logged-status ls-reading">Reading</span></div>
+        <div class="logged-item"><div class="logged-cover bc4"></div><div class="logged-info"><div class="logged-title">Pachinko</div><div class="logged-author">Min Jin Lee</div><div class="logged-rating">★★★★★</div><div class="logged-date">Finished Nov 14, 2024</div></div><span class="logged-status ls-read">Read</span></div>
+        <div class="logged-item"><div class="logged-cover bc2"></div><div class="logged-info"><div class="logged-title">The Secret History</div><div class="logged-author">Donna Tartt</div><div class="logged-rating">—</div><div class="logged-date">Want to read</div></div><span class="logged-status ls-want">Want to Read</span></div>
+        <div class="logged-item"><div class="logged-cover bc3"></div><div class="logged-info"><div class="logged-title">Piranesi</div><div class="logged-author">Susanna Clarke</div><div class="logged-rating">★★★★★</div><div class="logged-date">Finished Oct 22, 2024</div></div><span class="logged-status ls-read">Read</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: REVIEWS (hidden) -->
+  <div id="tab-reviews" class="profile-tab-content" style="display:none">
+    <div style="max-width:1200px;margin:0 auto;padding:32px 40px">
+      <div class="section-header"><span class="section-title">Reviews</span><span style="font-size:13px;color:var(--text-muted)">41 total</span></div>
+      <div class="reviews-grid">
+        <div class="review-card"><div class="rc-header"><div class="rc-book-cover bc1"></div><div><div class="rc-book-title">The Brothers Karamazov</div><div class="rc-book-author">Dostoevsky, 1880</div><div class="rc-stars">★★★★★</div></div></div><div class="rc-text">Dostoevsky doesn't write characters — he excavates them. Every page is a reckoning with faith, free will, guilt, and love. The Grand Inquisitor chapter alone is worth the entire 800 pages.</div><div class="rc-footer"><span class="rc-likes">♥ 24 likes</span><span class="rc-date">Jan 10, 2025</span></div></div>
+        <div class="review-card"><div class="rc-header"><div class="rc-book-cover bc5"></div><div><div class="rc-book-title">A Little Life</div><div class="rc-book-author">Yanagihara, 2015</div><div class="rc-stars">★★★★★</div></div></div><div class="rc-text">I finished this on a Sunday afternoon and sat in silence for an hour. Yanagihara asks you to witness pain without looking away, and somehow that becomes its own form of grace.</div><div class="rc-footer"><span class="rc-likes">♥ 18 likes</span><span class="rc-date">Dec 28, 2024</span></div></div>
+        <div class="review-card"><div class="rc-header"><div class="rc-book-cover bc4"></div><div><div class="rc-book-title">Pachinko</div><div class="rc-book-author">Min Jin Lee, 2017</div><div class="rc-stars">★★★★★</div></div></div><div class="rc-text">Four generations, one family, a century of history. Min Jin Lee writes like a historian who has been waiting their whole life to tell you this story. I cried three separate times.</div><div class="rc-footer"><span class="rc-likes">♥ 12 likes</span><span class="rc-date">Nov 14, 2024</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABs: placeholder -->
+  <div id="tab-lists" class="profile-tab-content" style="display:none"><div style="max-width:1200px;margin:0 auto;padding:60px 40px;text-align:center;color:var(--text-muted)"><div style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:8px">Your lists</div><div>Create curated lists of books to share with others.</div></div></div>
+  <div id="tab-watchlist" class="profile-tab-content" style="display:none"><div style="max-width:1200px;margin:0 auto;padding:60px 40px;text-align:center;color:var(--text-muted)"><div style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:8px">Your watchlist</div><div>Books you've saved to read later.</div></div></div>
+  <div id="tab-network" class="profile-tab-content" style="display:none"><div style="max-width:1200px;margin:0 auto;padding:60px 40px;text-align:center;color:var(--text-muted)"><div style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:8px">Your network</div><div>People you follow and your followers.</div></div></div>
+
+  <!-- FOOTER -->
+  <div class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand"><a class="nav-logo" onclick="navigate('home')"><span class="nav-dot"></span>LitTheatre</a><p class="footer-desc">Track every book you've read, share your literary journey, and discover what to read next.</p></div>
+      <div><div class="footer-col-title">Explore</div><ul class="footer-links"><li><a href="#">Popular books</a></li><li><a href="#">New releases</a></li><li><a href="#">Top lists</a></li></ul></div>
+      <div><div class="footer-col-title">Community</div><ul class="footer-links"><li><a href="#">Members</a></li><li><a href="#">Reviews</a></li></ul></div>
+      <div><div class="footer-col-title">Company</div><ul class="footer-links"><li><a href="#">About</a></li><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul></div>
+    </div>
+    <div class="footer-bottom"><span>© 2025 LitTheatre. All rights reserved.</span><span style="font-family:'DM Mono',monospace">v1.0.0-beta</span></div>
+  </div>
+</div><!-- /profile -->
+
+
+<!-- ══════════════════════════════════════
+     LOGIN PAGE (no shared nav)
+══════════════════════════════════════ -->
+<div id="page-login">
+  <!-- LEFT: VISUAL PANEL -->
+  <div class="login-visual">
+    <div class="login-visual-bg"></div>
+    <div class="login-grid"></div>
+    <div class="login-books-visual">
+      <div class="lbv-spine lbv4">WOOLF</div>
+      <div class="lbv-spine lbv2">DOSTOEVSKY</div>
+      <div class="lbv-spine lbv1">KAFKA</div>
+      <div class="lbv-spine lbv3">TOLSTOY</div>
+      <div class="lbv-spine lbv5">BORGES</div>
+    </div>
+    <div class="login-quote">
+      <blockquote>"A reader lives a thousand lives before he dies. The man who never reads lives only one."</blockquote>
+      <cite>— George R.R. Martin</cite>
+    </div>
+  </div>
+
+  <!-- RIGHT: FORM PANEL -->
+  <div class="login-form-side">
+    <div class="login-form-box fade-up">
+      <div class="login-logo" onclick="navigate('home')">
+        <span class="nav-dot"></span>LitTheatre
+      </div>
+
+      <div class="auth-tabs" id="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuth('signin')">Sign in</button>
+        <button class="auth-tab" onclick="switchAuth('signup')">Create account</button>
+      </div>
+
+      <!-- SIGN IN -->
+      <div id="signin-panel">
+        <h1 class="login-heading">Welcome back.</h1>
+        <p class="login-subheading">Sign in to your LitTheatre account to continue tracking your reading.</p>
+        <form class="login-form" onsubmit="return false">
+          <div class="form-group">
+            <label class="form-label">Email or username</label>
+            <input class="form-input" type="text" placeholder="aryan@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" placeholder="••••••••••">
+          </div>
+          <div class="login-extras">
+            <label class="login-remember"><input type="checkbox" checked> Remember me</label>
+            <span class="login-forgot">Forgot password?</span>
+          </div>
+          <button class="btn-login-full" onclick="navigate('home')">Sign in to LitTheatre</button>
+          <div class="login-divider">or continue with</div>
+          <button class="btn-social">
+            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Continue with Google
+          </button>
+          <button class="btn-social">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg>
+            Continue with GitHub
+          </button>
+          <div class="login-footer-text">Don't have an account? <a onclick="switchAuth('signup')">Create one free</a></div>
+        </form>
+      </div>
+
+      <!-- SIGN UP -->
+      <div id="signup-panel" style="display:none">
+        <h1 class="login-heading">Start reading.</h1>
+        <p class="login-subheading">Create your free LitTheatre account and join 2.4 million readers.</p>
+        <form class="login-form" onsubmit="return false">
+          <div class="form-group">
+            <label class="form-label">Full name</label>
+            <input class="form-input" type="text" placeholder="Aryan Kulkarni">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input class="form-input" type="text" placeholder="aryan_reads">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" placeholder="aryan@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" placeholder="At least 8 characters">
+          </div>
+          <button class="btn-login-full" onclick="navigate('home')" style="margin-top:4px">Create my account</button>
+          <div class="login-divider">or sign up with</div>
+          <button class="btn-social">
+            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Continue with Google
+          </button>
+          <div class="login-footer-text">Already have an account? <a onclick="switchAuth('signin')">Sign in</a></div>
+          <div class="login-policy">By creating an account you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div><!-- /login -->
+
+
+<!-- ══════════════════════════════════════
+     TOAST NOTIFICATION
+══════════════════════════════════════ -->
+<div id="toast" style="
+  position:fixed;bottom:80px;right:24px;z-index:9999;
+  background:var(--bg-elevated);border:1px solid rgba(0,200,117,.3);
+  border-radius:var(--radius-lg);padding:14px 20px;
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--text-primary);
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+  transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none;
+">
+  <span style="color:var(--accent-green);font-size:16px">✓</span>
+  <span>Entry saved to your diary!</span>
+</div>
+
+<!-- PAGE INDICATOR -->
+<div class="page-indicator" id="page-indicator">
+  <div class="live-dot"></div>
+  <span id="indicator-text">Home</span>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════ -->
+<script>
+/* ─ ROUTING ─ */
+const pages = {
+  home:    { el:'page-home',    nav:true,  label:'Home',      navId:'nav-home' },
+  log:     { el:'page-log',     nav:true,  label:'Log Book',  navId:'nav-log' },
+  profile: { el:'page-profile', nav:true,  label:'Profile',   navId:null },
+  login:   { el:'page-login',   nav:false, label:'Sign in',   navId:null },
+};
+
+function navigate(page) {
+  // hide all pages
+  Object.values(pages).forEach(p => {
+    const el = document.getElementById(p.el);
+    el.classList.remove('active');
+    el.style.display = '';
+  });
+
+  const cfg = pages[page];
+  const el = document.getElementById(cfg.el);
+
+  // login page has its own special display
+  if (page === 'login') {
+    document.getElementById('main-nav').style.display = 'none';
+    document.getElementById('page-indicator').style.display = 'none';
+    el.style.display = 'grid';
+    el.classList.add('active');
+  } else {
+    document.getElementById('main-nav').style.display = 'flex';
+    document.getElementById('page-indicator').style.display = 'flex';
+    el.classList.add('active');
+  }
+
+  // update nav active state
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  if (cfg.navId) {
+    const navEl = document.getElementById(cfg.navId);
+    if (navEl) navEl.classList.add('active');
+  }
+
+  document.getElementById('indicator-text').textContent = cfg.label;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ─ STAR RATING (Log page) ─ */
+const ratingLabels = {1:'1 star — Didn\'t like it',2:'2 stars — It was ok',3:'3 stars — Liked it',4:'4 stars — Really liked it',5:'5 stars — It was amazing ✦'};
+const starBtns = document.querySelectorAll('#star-rating .star-btn-big');
+
+function updateStars(n) {
+  starBtns.forEach((b, i) => b.classList.toggle('active', i < n));
+  document.getElementById('rating-label').textContent = ratingLabels[n] || '';
+}
+
+starBtns.forEach((btn, i) => {
+  btn.addEventListener('click', () => updateStars(i + 1));
+  btn.addEventListener('mouseenter', () => starBtns.forEach((b, j) => { b.style.color = j <= i ? 'var(--accent-amber)' : ''; }));
+  btn.addEventListener('mouseleave', () => starBtns.forEach(b => { b.style.color = ''; }));
+});
+
+/* ─ STATUS TABS ─ */
+document.querySelectorAll('#status-tabs .status-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#status-tabs .status-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  });
+});
+
+/* ─ SELECT BOOK ─ */
+function selectBook(title, author) {
+  document.getElementById('selected-book-name').textContent = `${title} by ${author}`;
+  document.getElementById('log-form-card').scrollIntoView({behavior:'smooth', block:'start'});
+  document.getElementById('log-form-card').style.borderColor = 'rgba(0,200,117,.4)';
+  setTimeout(() => { document.getElementById('log-form-card').style.borderColor = ''; }, 1500);
+}
+
+/* ─ TOAST ─ */
+function showSaveToast() {
+  const t = document.getElementById('toast');
+  t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(20px)'; }, 2800);
+}
+
+/* ─ GENRE TAGS ─ */
+document.querySelectorAll('.genre-tag').forEach(tag => {
+  tag.addEventListener('click', () => tag.classList.toggle('active'));
+});
+
+/* ─ FOLLOW BUTTONS ─ */
+document.querySelectorAll('.btn-follow').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const following = btn.classList.toggle('following');
+    btn.textContent = following ? 'Following' : 'Follow';
+  });
+});
+
+/* ─ PROFILE TABS ─ */
+function switchProfileTab(clickedBtn, tabId) {
+  document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.profile-tab-content').forEach(c => c.style.display = 'none');
+  clickedBtn.classList.add('active');
+  document.getElementById(tabId).style.display = 'block';
+}
+
+/* ─ AUTH TABS (login page) ─ */
+function switchAuth(mode) {
+  document.querySelectorAll('#auth-tabs .auth-tab').forEach(t => t.classList.remove('active'));
+  const idx = mode === 'signin' ? 0 : 1;
+  document.querySelectorAll('#auth-tabs .auth-tab')[idx].classList.add('active');
+  document.getElementById('signin-panel').style.display = mode === 'signin' ? 'block' : 'none';
+  document.getElementById('signup-panel').style.display = mode === 'signup' ? 'block' : 'none';
+}
+
+/* ─ REVIEW LIKES ─ */
+document.querySelectorAll('.rc-likes').forEach(btn => {
+  btn.addEventListener('click', () => btn.style.color = btn.style.color === 'rgb(232, 64, 87)' ? '' : 'var(--accent-red)');
+});
+
+/* ─ INIT ─ */
+navigate('home');
+</script>
+</body>
+</html>
