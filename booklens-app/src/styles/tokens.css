@@ -1,0 +1,95 @@
+/* ═══════════════════════════════════════════
+   BOOKLENS DESIGN TOKENS
+   Single source of truth for all styles.
+   Import this in main.jsx only.
+═══════════════════════════════════════════ */
+
+:root {
+  /* Backgrounds */
+  --bg-primary:    #0d0f0e;
+  --bg-secondary:  #131614;
+  --bg-card:       #181b19;
+  --bg-elevated:   #1e2320;
+
+  /* Accent colours */
+  --accent-green:      #00c875;
+  --accent-green-dim:  #00c87518;
+  --accent-green-glow: rgba(0, 200, 117, 0.3);
+  --accent-amber:      #f5a623;
+  --accent-amber-dim:  rgba(245, 166, 35, 0.12);
+  --accent-red:        #e84057;
+
+  /* Text */
+  --text-primary:   #eef0ee;
+  --text-secondary: #8a9189;
+  --text-muted:     #4a524a;
+
+  /* Borders */
+  --border:       #242824;
+  --border-light: #2e332e;
+
+  /* Border radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Nav height — used for padding-top on all pages */
+  --nav-h: 58px;
+
+  /* Shadows */
+  --shadow-card:  0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-green: 0 0 20px rgba(0, 200, 117, 0.25);
+}
+
+/* ─── RESET ─── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; font-family: 'DM Sans', sans-serif; }
+input, textarea, select { font-family: 'DM Sans', sans-serif; }
+img { display: block; max-width: 100%; }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+/* ─── BOOK COVER COLOUR SWATCHES (shared utility) ─── */
+.bc1 { background: linear-gradient(145deg, #1a3a2e, #0e2218); }
+.bc2 { background: linear-gradient(145deg, #3a1a1a, #220e0e); }
+.bc3 { background: linear-gradient(145deg, #1a1a3a, #0e0e22); }
+.bc4 { background: linear-gradient(145deg, #3a2a1a, #22180e); }
+.bc5 { background: linear-gradient(145deg, #2a1a3a, #180e22); }
+.bc6 { background: linear-gradient(145deg, #1a3a3a, #0e2222); }
+.bc7 { background: linear-gradient(145deg, #3a3a1a, #22220e); }
+.bc8 { background: linear-gradient(145deg, #2a3a1a, #18220e); }
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.fade-up { animation: fadeUp 0.35s ease both; }

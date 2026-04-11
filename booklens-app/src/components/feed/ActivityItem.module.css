@@ -1,0 +1,123 @@
+.item {
+  display: flex;
+  gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fadeUp 0.3s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Avatar */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1.5px solid var(--border-light);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Body */
+.body { flex: 1; min-width: 0; }
+
+.text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.text strong { color: var(--text-primary); font-weight: 600; }
+.text a      { color: var(--accent-green); text-decoration: none; }
+.text a:hover { text-decoration: underline; }
+
+/* Book mini card */
+.bookMini {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.miniCover {
+  width: 28px;
+  height: 42px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.miniInfo { min-width: 0; }
+
+.miniTitle {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.miniAuthor {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Cover list (multiple books) */
+.coverList {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.miniCoverSm {
+  width: 28px;
+  height: 42px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+/* Quote */
+.quote {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-green);
+  padding: 10px 14px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.6;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.reaction {
+  font-size: 11px;
+  color: var(--text-muted);
+}

@@ -1,0 +1,222 @@
+/* ── BANNER ── */
+.banner {
+  height: 200px;
+  background: linear-gradient(135deg, #0a2e1a 0%, #1a0a2e 50%, #0a1a2e 100%);
+  position: relative; overflow: hidden;
+}
+.banner::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 30px,
+    rgba(0,200,117,.015) 30px, rgba(0,200,117,.015) 31px
+  );
+}
+.banner::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(0,200,117,.08), transparent);
+}
+
+/* ── HEADER ── */
+.headerWrap {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+.headerInner {
+  max-width: 1200px; margin: 0 auto; padding: 0 40px;
+  display: flex; align-items: flex-end; gap: 20px;
+  margin-top: -56px; position: relative; z-index: 2;
+  padding-bottom: 24px;
+}
+
+.avatarXl {
+  width: 112px; height: 112px; border-radius: 50%;
+  background: linear-gradient(135deg, #00c875, #00838a);
+  border: 5px solid var(--bg-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 38px; font-weight: 700; color: #0d0f0e;
+  flex-shrink: 0;
+}
+
+.identity { flex: 1; padding-bottom: 8px; }
+.name   { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; line-height: 1.1; margin-bottom: 4px; }
+.handle { font-size: 13px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+.bio    { font-size: 14px; color: var(--text-secondary); line-height: 1.6; max-width: 500px; }
+
+.actions { display: flex; gap: 10px; padding-bottom: 8px; flex-shrink: 0; }
+
+.btnOutline {
+  padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  background: transparent; border: 1px solid var(--border-light); color: var(--text-secondary);
+  cursor: pointer; transition: all .2s;
+}
+.btnOutline:hover { border-color: var(--text-muted); color: var(--text-primary); }
+
+.btnPrimary {
+  padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  background: var(--accent-green); color: #0d0f0e;
+  border: none; cursor: pointer; transition: all .2s; text-decoration: none;
+  display: flex; align-items: center;
+}
+.btnPrimary:hover { background: #00e085; box-shadow: var(--shadow-green); }
+
+/* ── TAB BAR ── */
+.tabBar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: var(--nav-h); z-index: 10;
+}
+
+.tabBarInner {
+  max-width: 1200px; margin: 0 auto; padding: 0 40px;
+  display: flex;
+}
+
+.tab {
+  padding: 14px 20px;
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer; transition: all .2s;
+  border-top: none; border-left: none; border-right: none;
+  background: none; font-family: 'DM Sans', sans-serif;
+}
+.tab:hover     { color: var(--text-secondary); }
+.tabActive { color: var(--text-primary); border-bottom-color: var(--accent-green); }
+
+/* ── BODY LAYOUT ── */
+.body {
+  max-width: 1200px; margin: 0 auto;
+  padding: 32px 40px;
+  display: grid; grid-template-columns: 1fr 280px; gap: 40px;
+}
+
+.main {}
+
+/* Stats grid */
+.statsGrid {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 1px; background: var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid var(--border); margin-bottom: 32px;
+}
+
+.statBox {
+  background: var(--bg-card); padding: 20px 16px;
+  text-align: center; cursor: pointer; transition: background .2s;
+}
+.statBox:hover { background: var(--bg-elevated); }
+
+.sbNum   { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.sbLabel { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; }
+
+/* Sub headings */
+.subHeader {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.subTitle { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; }
+.subLink {
+  background: none; border: none; color: var(--accent-green);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.subLink:hover { opacity: .7; }
+.subMeta { font-size: 13px; color: var(--text-muted); }
+
+/* Recent covers */
+.recentCovers { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 0; }
+.rCover {
+  width: 64px; height: 96px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  cursor: pointer; transition: transform .2s;
+}
+.rCover:hover { transform: translateY(-3px); }
+
+/* Rating chart */
+.ratingChart { display: flex; flex-direction: column; gap: 8px; }
+.ratingRow { display: flex; align-items: center; gap: 10px; }
+.ratingLabel { font-size: 12px; color: var(--text-secondary); width: 22px; text-align: right; flex-shrink: 0; }
+.ratingBarWrap { flex: 1; height: 8px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden; }
+.ratingBar { height: 100%; background: var(--accent-amber); border-radius: 4px; }
+.ratingCount { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; width: 32px; }
+
+/* Reviews list */
+.reviewsList { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── SIDEBAR ── */
+.sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+.widget {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+}
+
+.widgetTitle {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 16px;
+}
+
+/* Favourite books grid */
+.favGrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.favCover { aspect-ratio: 2/3; border-radius: var(--radius-sm); border: 1px solid var(--border); cursor: pointer; transition: transform .2s; }
+.favCover:hover { transform: scale(1.03); }
+
+/* By year bars */
+.byYear { display: flex; flex-direction: column; gap: 8px; }
+.ybRow { display: flex; align-items: center; }
+.ybYear  { font-size: 13px; color: var(--text-secondary); width: 38px; flex-shrink: 0; }
+.ybBarWrap { flex: 1; height: 4px; background: var(--bg-elevated); border-radius: 2px; margin: 0 10px; overflow: hidden; }
+.ybBar { height: 100%; background: var(--accent-green); border-radius: 2px; opacity: .7; }
+.ybCount { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); width: 28px; text-align: right; }
+
+/* Genre breakdown */
+.genreBreakdown { display: flex; flex-direction: column; gap: 8px; }
+.gbRow { display: flex; align-items: center; }
+.gbGenre { font-size: 12px; color: var(--text-secondary); width: 110px; flex-shrink: 0; }
+.gbBarWrap { flex: 1; height: 4px; background: var(--bg-elevated); border-radius: 2px; margin: 0 10px; overflow: hidden; }
+.gbBar { height: 100%; background: var(--accent-green); border-radius: 2px; }
+.gbPct { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; width: 32px; text-align: right; }
+
+/* Challenge */
+.challengeGoal { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.challengeNum  { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; }
+.challengeOf   { color: var(--text-muted); font-size: 13px; }
+.progressBar   { height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.progressFill  { height: 100%; background: linear-gradient(90deg, var(--accent-green), #00e085); border-radius: 3px; box-shadow: 0 0 8px rgba(0,200,117,.4); }
+.challengeLabel { font-size: 12px; color: var(--text-muted); }
+
+/* ── FULL-WIDTH TABS ── */
+.tabContent {
+  max-width: 1200px; margin: 0 auto; padding: 32px 40px;
+}
+
+.diaryList { display: flex; flex-direction: column; }
+.diaryItem {
+  display: flex; gap: 16px; align-items: center;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.diaryCover  { width: 44px; height: 66px; border-radius: 6px; flex-shrink: 0; border: 1px solid var(--border); }
+.diaryInfo   { flex: 1; min-width: 0; }
+.diaryTitle  { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.diaryAuthor { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.diaryRating { color: var(--accent-amber); font-size: 12px; letter-spacing: 1px; }
+.diaryDate   { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+.reviewsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+  gap: 20px;
+}
+
+/* Empty state */
+.emptyTab {
+  max-width: 1200px; margin: 0 auto;
+  padding: 80px 40px; text-align: center;
+}
+.emptyTitle { font-family: 'Playfair Display', serif; font-size: 24px; margin-bottom: 8px; }
+.emptyDesc  { color: var(--text-muted); font-size: 14px; }
