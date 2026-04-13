@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,17 +29,18 @@ public class ReviewService {
     private final BookApiService   bookApiService;
 
     @Transactional
+    @CacheEvict(value = "recommendations", key = "#userId")
     public ReviewDto createReview(Long userId, String externalBookId, String content, boolean hasSpoiler) {
         if (reviewRepository.existsByUserIdAndExternalBookId(userId, externalBookId))
             throw new BookLensException("You've already reviewed this book.", HttpStatus.CONFLICT);
 
         User user = getUser(userId);
         Review review = reviewRepository.save(Review.builder()
-            .user(user)
-            .externalBookId(externalBookId)
-            .content(content)
-            .hasSpoiler(hasSpoiler)
-            .build());
+                .user(user)
+                .externalBookId(externalBookId)
+                .content(content)
+                .hasSpoiler(hasSpoiler)
+                .build());
 
         return toDto(review, safeGetBook(externalBookId), userId);
     }
@@ -52,6 +54,7 @@ public class ReviewService {
     }
 
     @Transactional
+    @CacheEvict(value = "recommendations", key = "#userId")
     public void deleteReview(Long userId, Long reviewId) {
         reviewRepository.delete(getAndCheckOwner(userId, reviewId));
     }
@@ -59,7 +62,7 @@ public class ReviewService {
     @Transactional
     public Map<String, Object> toggleLike(Long userId, Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
-            .orElseThrow(() -> new BookLensException("Review not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BookLensException("Review not found", HttpStatus.NOT_FOUND));
         User user = getUser(userId);
         boolean liked = review.getLikedBy().contains(user);
         if (liked) review.getLikedBy().remove(user);
@@ -72,30 +75,30 @@ public class ReviewService {
     public Page<ReviewDto> getByBook(String externalBookId, Long currentUserId, int page, int size) {
         BookDto book = safeGetBook(externalBookId);
         return reviewRepository
-            .findPopularByExternalBookId(externalBookId, PageRequest.of(page, size))
-            .map(r -> toDto(r, book, currentUserId));
+                .findPopularByExternalBookId(externalBookId, PageRequest.of(page, size))
+                .map(r -> toDto(r, book, currentUserId));
     }
 
     @Transactional(readOnly = true)
     public Page<ReviewDto> getByUser(Long userId, Long currentUserId, int page, int size) {
         return reviewRepository
-            .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
-            .map(r -> toDto(r, safeGetBook(r.getExternalBookId()), currentUserId));
+                .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
+                .map(r -> toDto(r, safeGetBook(r.getExternalBookId()), currentUserId));
     }
 
     @Transactional(readOnly = true)
     public Page<ReviewDto> getPopular(Long currentUserId, int page, int size) {
         LocalDateTime since = LocalDateTime.now().minusWeeks(1);
         return reviewRepository
-            .findPopularSince(since, PageRequest.of(page, size))
-            .map(r -> toDto(r, safeGetBook(r.getExternalBookId()), currentUserId));
+                .findPopularSince(since, PageRequest.of(page, size))
+                .map(r -> toDto(r, safeGetBook(r.getExternalBookId()), currentUserId));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private Review getAndCheckOwner(Long userId, Long reviewId) {
         Review r = reviewRepository.findById(reviewId)
-            .orElseThrow(() -> new BookLensException("Review not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BookLensException("Review not found", HttpStatus.NOT_FOUND));
         if (!r.getUser().getId().equals(userId))
             throw new BookLensException("Not authorized", HttpStatus.FORBIDDEN);
         return r;
@@ -103,7 +106,7 @@ public class ReviewService {
 
     private User getUser(Long id) {
         return userRepository.findById(id)
-            .orElseThrow(() -> new BookLensException("User not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BookLensException("User not found", HttpStatus.NOT_FOUND));
     }
 
     private BookDto safeGetBook(String externalBookId) {
@@ -117,24 +120,24 @@ public class ReviewService {
 
     private ReviewDto toDto(Review r, BookDto book, Long currentUserId) {
         boolean liked = currentUserId != null &&
-            r.getLikedBy().stream().anyMatch(u -> u.getId().equals(currentUserId));
+                r.getLikedBy().stream().anyMatch(u -> u.getId().equals(currentUserId));
 
         return ReviewDto.builder()
-            .id(r.getId())
-            .content(r.getContent())
-            .hasSpoiler(r.isHasSpoiler())
-            .likesCount(r.getLikesCount())
-            .likedByCurrentUser(liked)
-            .bookExternalId(r.getExternalBookId())
-            .bookTitle(book != null ? book.getTitle() : null)
-            .bookAuthor(book != null ? book.getAuthor() : null)
-            .bookCoverUrl(book != null ? book.getCoverUrl() : null)
-            .userId(r.getUser().getId())
-            .username(r.getUser().getUsername())
-            .displayName(r.getUser().getDisplayName())
-            .avatarUrl(r.getUser().getAvatarUrl())
-            .createdAt(r.getCreatedAt())
-            .updatedAt(r.getUpdatedAt())
-            .build();
+                .id(r.getId())
+                .content(r.getContent())
+                .hasSpoiler(r.isHasSpoiler())
+                .likesCount(r.getLikesCount())
+                .likedByCurrentUser(liked)
+                .bookExternalId(r.getExternalBookId())
+                .bookTitle(book != null ? book.getTitle() : null)
+                .bookAuthor(book != null ? book.getAuthor() : null)
+                .bookCoverUrl(book != null ? book.getCoverUrl() : null)
+                .userId(r.getUser().getId())
+                .username(r.getUser().getUsername())
+                .displayName(r.getUser().getDisplayName())
+                .avatarUrl(r.getUser().getAvatarUrl())
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
     }
 }

@@ -12,6 +12,7 @@ import com.booklens.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,18 +33,21 @@ public class BookLogService {
     // ── Log / update a book entry ─────────────────────────────────────────
 
     @Transactional
-    @CacheEvict(value = "recommendations", key = "#userId")
+    @Caching(evict = {
+            @CacheEvict(value = "recommendations", key = "#userId"),
+            @CacheEvict(value = "book-detail",     key = "#externalBookId")
+    })
     public BookLogDto logBook(Long userId, String externalBookId, Map<String, Object> payload) {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new BookLensException("User not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BookLensException("User not found", HttpStatus.NOT_FOUND));
 
         // Validate that the book actually exists in Open Library before saving
         // (only on new logs — skip for updates to avoid extra API call)
         boolean isNew = !bookLogRepository.existsByUserIdAndExternalBookId(userId, externalBookId);
 
         BookLog log = bookLogRepository
-            .findByUserIdAndExternalBookId(userId, externalBookId)
-            .orElse(BookLog.builder().user(user).externalBookId(externalBookId).build());
+                .findByUserIdAndExternalBookId(userId, externalBookId)
+                .orElse(BookLog.builder().user(user).externalBookId(externalBookId).build());
 
         applyPayload(log, payload);
         BookLog saved = bookLogRepository.save(log);
@@ -60,8 +64,8 @@ public class BookLogService {
     public Page<BookLogDto> getUserDiary(Long userId, ReadingStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<BookLog> logs = status != null
-            ? bookLogRepository.findByUserIdAndStatusOrderByUpdatedAtDesc(userId, status, pageable)
-            : bookLogRepository.findByUserIdOrderByUpdatedAtDesc(userId, pageable);
+                ? bookLogRepository.findByUserIdAndStatusOrderByUpdatedAtDesc(userId, status, pageable)
+                : bookLogRepository.findByUserIdOrderByUpdatedAtDesc(userId, pageable);
 
         return logs.map(log -> toDto(log, safeGetBook(log.getExternalBookId())));
     }
@@ -71,7 +75,7 @@ public class BookLogService {
     @Transactional(readOnly = true)
     public Page<BookLogDto> getFeed(Long userId, int page, int size) {
         Page<BookLog> logs = bookLogRepository
-            .findFeedForUser(userId, PageRequest.of(page, size));
+                .findFeedForUser(userId, PageRequest.of(page, size));
 
         return logs.map(log -> toDto(log, safeGetBook(log.getExternalBookId())));
     }
@@ -82,7 +86,7 @@ public class BookLogService {
     @CacheEvict(value = "recommendations", key = "#userId")
     public void deleteLog(Long userId, Long logId) {
         BookLog log = bookLogRepository.findById(logId)
-            .orElseThrow(() -> new BookLensException("Log not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BookLensException("Log not found", HttpStatus.NOT_FOUND));
         if (!log.getUser().getId().equals(userId))
             throw new BookLensException("Not authorized", HttpStatus.FORBIDDEN);
         bookLogRepository.delete(log);
@@ -92,7 +96,7 @@ public class BookLogService {
 
     public Map<String, Object> getChallengeProgress(Long userId, int year) {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new BookLensException("User not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BookLensException("User not found", HttpStatus.NOT_FOUND));
 
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end   = LocalDate.of(year + 1, 1, 1);
@@ -102,10 +106,10 @@ public class BookLogService {
         double percent = goal > 0 ? Math.min(100.0, booksRead * 100.0 / goal) : 0;
 
         return Map.of(
-            "year",      year,
-            "goal",      goal,
-            "booksRead", booksRead,
-            "percent",   (long) Math.round(percent)
+                "year",      year,
+                "goal",      goal,
+                "booksRead", booksRead,
+                "percent",   (long) Math.round(percent)
         );
     }
 
@@ -140,32 +144,32 @@ public class BookLogService {
         } catch (Exception e) {
             log.debug("Could not fetch book {} from API: {}", externalBookId, e.getMessage());
             return BookDto.builder()
-                .externalId(externalBookId)
-                .title("Book details unavailable")
-                .author("")
-                .build();
+                    .externalId(externalBookId)
+                    .title("Book details unavailable")
+                    .author("")
+                    .build();
         }
     }
 
     private BookLogDto toDto(BookLog log, BookDto book) {
         return BookLogDto.builder()
-            .id(log.getId())
-            .status(log.getStatus().name())
-            .rating(log.getRatingAsStars())
-            .startedAt(log.getStartedAt())
-            .finishedAt(log.getFinishedAt())
-            .reread(log.isReread())
-            .privateEntry(log.isPrivateEntry())
-            .tags(log.getTags())
-            .bookExternalId(log.getExternalBookId())
-            .bookTitle(book != null ? book.getTitle() : null)
-            .bookAuthor(book != null ? book.getAuthor() : null)
-            .bookCoverUrl(book != null ? book.getCoverUrl() : null)
-            .userId(log.getUser().getId())
-            .username(log.getUser().getUsername())
-            .displayName(log.getUser().getDisplayName())
-            .createdAt(log.getCreatedAt())
-            .updatedAt(log.getUpdatedAt())
-            .build();
+                .id(log.getId())
+                .status(log.getStatus().name())
+                .rating(log.getRatingAsStars())
+                .startedAt(log.getStartedAt())
+                .finishedAt(log.getFinishedAt())
+                .reread(log.isReread())
+                .privateEntry(log.isPrivateEntry())
+                .tags(log.getTags())
+                .bookExternalId(log.getExternalBookId())
+                .bookTitle(book != null ? book.getTitle() : null)
+                .bookAuthor(book != null ? book.getAuthor() : null)
+                .bookCoverUrl(book != null ? book.getCoverUrl() : null)
+                .userId(log.getUser().getId())
+                .username(log.getUser().getUsername())
+                .displayName(log.getUser().getDisplayName())
+                .createdAt(log.getCreatedAt())
+                .updatedAt(log.getUpdatedAt())
+                .build();
     }
 }
