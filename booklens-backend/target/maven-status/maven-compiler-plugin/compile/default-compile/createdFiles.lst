@@ -17,6 +17,7 @@ com\booklens\dto\review\ReviewDto$ReviewDtoBuilder.class
 com\booklens\entity\User$UserBuilder.class
 com\booklens\config\CacheConfig.class
 com\booklens\dto\review\ReviewDto.class
+com\booklens\repository\BookListRepository.class
 com\booklens\dto\log\BookLogDto$BookLogDtoBuilder.class
 com\booklens\dto\book\BookSearchResponse$BookSearchResponseBuilder.class
 com\booklens\entity\BookList$BookListBuilder.class
@@ -36,6 +37,7 @@ com\booklens\controller\BookLogController.class
 com\booklens\dto\book\BookDto.class
 com\booklens\entity\Review.class
 com\booklens\repository\UserRepository.class
+com\booklens\controller\BookListController.class
 com\booklens\security\UserDetailsServiceImpl.class
 com\booklens\security\JwtAuthFilter.class
 com\booklens\config\SecurityConfig.class

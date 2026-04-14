@@ -47,32 +47,32 @@ public class OpenLibraryClient {
      * Search for books by query string.
      * Uses Open Library /search.json endpoint.
      *
-     * @param query  free-text query (title, author, ISBN, etc.)
-     * @param page   0-based page number
-     * @param size   results per page (max 100)
+     * @param query free-text query (title, author, ISBN, etc.)
+     * @param page  0-based page number
+     * @param size  results per page (max 100)
      */
     @SuppressWarnings("unchecked")
     public BookSearchResponse search(String query, int page, int size) {
-        int limit  = Math.min(size, 100);
+        int limit = Math.min(size, 100);
         int offset = page * limit;
 
         try {
             WebClient client = webClientBuilder.baseUrl(baseUrl).build();
 
             Map<String, Object> response = client.get()
-                .uri(uri -> uri
-                    .path("/search.json")
-                    .queryParam("q",      query)
-                    .queryParam("limit",  limit)
-                    .queryParam("offset", offset)
-                    .queryParam("fields",
-                        "key,title,author_name,author_key,isbn,first_publish_year," +
-                        "number_of_pages_median,subject,cover_i,publisher,language")
-                    .build())
-                .retrieve()
-                .bodyToMono(Map.class)
-                .timeout(java.time.Duration.ofSeconds(8))
-                .block();
+                    .uri(uri -> uri
+                            .path("/search.json")
+                            .queryParam("q", query)
+                            .queryParam("limit", limit)
+                            .queryParam("offset", offset)
+                            .queryParam("fields",
+                                    "key,title,author_name,author_key,isbn,first_publish_year," +
+                                            "number_of_pages_median,subject,cover_i,publisher,language")
+                            .build())
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(java.time.Duration.ofSeconds(8))
+                    .block();
 
             if (response == null) return emptySearch(query, page, size);
 
@@ -80,24 +80,24 @@ public class OpenLibraryClient {
             List<Map<String, Object>> docs = (List<Map<String, Object>>) response.getOrDefault("docs", List.of());
 
             List<BookDto> books = docs.stream()
-                .map(this::docToBookDto)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                    .map(this::docToBookDto)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
 
             return BookSearchResponse.builder()
-                .books(books)
-                .page(page)
-                .size(size)
-                .totalResults(numFound)
-                .hasMore((offset + books.size()) < numFound)
-                .query(query)
-                .build();
+                    .books(books)
+                    .page(page)
+                    .size(size)
+                    .totalResults(numFound)
+                    .hasMore((offset + books.size()) < numFound)
+                    .query(query)
+                    .build();
 
         } catch (WebClientResponseException e) {
             log.warn("Open Library search API error {}: {}", e.getStatusCode(), query);
             return emptySearch(query, page, size);
         } catch (Exception e) {
-            log.error("Open Library search failed for '{}': {}", query, e.getMessage());
+            log.debug("Open Library search unavailable for '{}': {}", query, e.getMessage());
             return emptySearch(query, page, size);
         }
     }
@@ -107,7 +107,7 @@ public class OpenLibraryClient {
     /**
      * Fetch detailed info for a single book by its Open Library work ID.
      * e.g. workId = "OL45804W"
-     *
+     * <p>
      * Combines data from /works/{id}.json and /works/{id}/editions.json
      */
     @SuppressWarnings("unchecked")
@@ -117,11 +117,11 @@ public class OpenLibraryClient {
 
             // Fetch work (main metadata)
             Map<String, Object> work = client.get()
-                .uri("/works/{workId}.json", workId)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .timeout(java.time.Duration.ofSeconds(8))
-                .block();
+                    .uri("/works/{workId}.json", workId)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(java.time.Duration.ofSeconds(8))
+                    .block();
 
             if (work == null) return Optional.empty();
 
@@ -129,14 +129,14 @@ public class OpenLibraryClient {
             Map<String, Object> editions = null;
             try {
                 editions = client.get()
-                    .uri(uri -> uri
-                        .path("/works/{workId}/editions.json")
-                        .queryParam("limit", 1)
-                        .build(workId))
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(java.time.Duration.ofSeconds(5))
-                    .block();
+                        .uri(uri -> uri
+                                .path("/works/{workId}/editions.json")
+                                .queryParam("limit", 1)
+                                .build(workId))
+                        .retrieve()
+                        .bodyToMono(Map.class)
+                        .timeout(java.time.Duration.ofSeconds(5))
+                        .block();
             } catch (Exception e) {
                 log.debug("Could not fetch editions for {}: {}", workId, e.getMessage());
             }
@@ -166,20 +166,20 @@ public class OpenLibraryClient {
 
             // Authors
             List<?> authorNames = (List<?>) doc.get("author_name");
-            String  author      = authorNames != null && !authorNames.isEmpty()
-                ? authorNames.get(0).toString() : "Unknown Author";
+            String author = authorNames != null && !authorNames.isEmpty()
+                    ? authorNames.get(0).toString() : "Unknown Author";
             List<String> authors = authorNames != null
-                ? authorNames.stream().map(Object::toString).limit(5).collect(Collectors.toList())
-                : List.of();
+                    ? authorNames.stream().map(Object::toString).limit(5).collect(Collectors.toList())
+                    : List.of();
 
             // Cover
             Object coverId = doc.get("cover_i");
-            String coverL  = coverId != null ? coversUrl + "/id/" + coverId + "-L.jpg"  : null;
-            String coverM  = coverId != null ? coversUrl + "/id/" + coverId + "-M.jpg"  : null;
+            String coverL = coverId != null ? coversUrl + "/id/" + coverId + "-L.jpg" : null;
+            String coverM = coverId != null ? coversUrl + "/id/" + coverId + "-M.jpg" : null;
 
             // ISBN
             List<?> isbns = (List<?>) doc.get("isbn");
-            String  isbn  = (isbns != null && !isbns.isEmpty()) ? isbns.get(0).toString() : null;
+            String isbn = (isbns != null && !isbns.isEmpty()) ? isbns.get(0).toString() : null;
 
             // Year
             Object yr = doc.get("first_publish_year");
@@ -192,30 +192,30 @@ public class OpenLibraryClient {
             // Genres from subjects (first 5, skip long/noisy ones)
             List<?> subjects = (List<?>) doc.get("subject");
             List<String> genres = subjects != null
-                ? subjects.stream()
+                    ? subjects.stream()
                     .map(Object::toString)
                     .filter(s -> s.length() < 50 && !s.contains("--") && !s.matches(".*\\d{4}.*"))
                     .limit(5)
                     .collect(Collectors.toList())
-                : List.of();
+                    : List.of();
 
             // Publisher
             List<?> pubs = (List<?>) doc.get("publisher");
             String publisher = (pubs != null && !pubs.isEmpty()) ? pubs.get(0).toString() : null;
 
             return BookDto.builder()
-                .externalId(externalId)
-                .title(str(doc, "title"))
-                .author(author)
-                .authors(authors)
-                .coverUrl(coverL)
-                .coverUrlSmall(coverM)
-                .publishYear(year)
-                .pageCount(pages)
-                .genres(genres)
-                .isbn(isbn)
-                .publisher(publisher)
-                .build();
+                    .externalId(externalId)
+                    .title(str(doc, "title"))
+                    .author(author)
+                    .authors(authors)
+                    .coverUrl(coverL)
+                    .coverUrlSmall(coverM)
+                    .publishYear(year)
+                    .pageCount(pages)
+                    .genres(genres)
+                    .isbn(isbn)
+                    .publisher(publisher)
+                    .build();
 
         } catch (Exception e) {
             log.debug("Failed to map search doc to BookDto: {}", e.getMessage());
@@ -231,13 +231,36 @@ public class OpenLibraryClient {
             // Title
             String title = str(work, "title");
 
-            // Authors — from author references
+            // Authors — resolve each author key via /authors/{key}.json
             List<String> authors = new ArrayList<>();
             Object authorsObj = work.get("authors");
             if (authorsObj instanceof List<?> authorList) {
-                // Each is {"author": {"key": "/authors/OL123A"}, "type": {...}}
-                // We'd need another API call per author — use simple display
-                authors.add("See Open Library");
+                for (Object entry : authorList) {
+                    if (authors.size() >= 5) break;
+                    try {
+                        if (entry instanceof Map<?, ?> entryMap) {
+                            Object authorRef = entryMap.get("author");
+                            if (authorRef instanceof Map<?, ?> authorMap) {
+                                String authorKey = (String) authorMap.get("key");
+                                if (authorKey != null) {
+                                    String authorId = authorKey.replace("/authors/", "");
+                                    Map<?, ?> authorData = webClientBuilder.baseUrl(baseUrl).build()
+                                            .get()
+                                            .uri("/authors/{id}.json", authorId)
+                                            .retrieve()
+                                            .bodyToMono(Map.class)
+                                            .timeout(java.time.Duration.ofSeconds(4))
+                                            .block();
+                                    if (authorData != null) {
+                                        Object nameObj = authorData.get("name");
+                                        if (nameObj != null) authors.add(nameObj.toString());
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
             }
 
             // Description
@@ -257,12 +280,12 @@ public class OpenLibraryClient {
             // Subjects
             List<?> subjects = (List<?>) work.get("subjects");
             List<String> genres = subjects != null
-                ? subjects.stream()
+                    ? subjects.stream()
                     .map(Object::toString)
                     .filter(s -> s.length() < 50 && !s.contains("--"))
                     .limit(8)
                     .collect(Collectors.toList())
-                : List.of();
+                    : List.of();
 
             // Enrich from editions
             String isbn = null;
@@ -290,25 +313,26 @@ public class OpenLibraryClient {
                             // date formats: "2003", "August 12, 2003", "2003-08-12"
                             String dateStr = py.toString().trim();
                             year = Integer.parseInt(dateStr.replaceAll(".*?(\\d{4}).*", "$1"));
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
 
             return BookDto.builder()
-                .externalId(workId)
-                .title(title)
-                .author(authors.isEmpty() ? "Unknown Author" : authors.get(0))
-                .authors(authors)
-                .coverUrl(coverL)
-                .coverUrlSmall(coverM)
-                .description(description)
-                .genres(genres)
-                .isbn(isbn)
-                .publishYear(year)
-                .pageCount(pages)
-                .publisher(publisher)
-                .build();
+                    .externalId(workId)
+                    .title(title)
+                    .author(authors.isEmpty() ? "Unknown Author" : authors.get(0))
+                    .authors(authors)
+                    .coverUrl(coverL)
+                    .coverUrlSmall(coverM)
+                    .description(description)
+                    .genres(genres)
+                    .isbn(isbn)
+                    .publishYear(year)
+                    .pageCount(pages)
+                    .publisher(publisher)
+                    .build();
 
         } catch (Exception e) {
             log.error("Failed to map work {} to BookDto: {}", workId, e.getMessage());
@@ -335,16 +359,18 @@ public class OpenLibraryClient {
 
     private BookSearchResponse emptySearch(String query, int page, int size) {
         return BookSearchResponse.builder()
-            .books(List.of())
-            .page(page)
-            .size(size)
-            .totalResults(0)
-            .hasMore(false)
-            .query(query)
-            .build();
+                .books(List.of())
+                .page(page)
+                .size(size)
+                .totalResults(0)
+                .hasMore(false)
+                .query(query)
+                .build();
     }
 
-    /** Build cover URL from ISBN (fallback method) */
+    /**
+     * Build cover URL from ISBN (fallback method)
+     */
     public String buildIsbnCoverUrl(String isbn) {
         return isbn != null ? coversUrl + "/isbn/" + isbn + "-L.jpg" : null;
     }
@@ -354,7 +380,7 @@ public class OpenLibraryClient {
     /**
      * Fetch books for a specific subject/genre using Open Library's subjects API.
      * e.g. subject = "science_fiction" → /subjects/science_fiction.json
-     *
+     * <p>
      * This is more reliable for genre browsing than the search endpoint.
      */
     @SuppressWarnings("unchecked")
@@ -363,15 +389,15 @@ public class OpenLibraryClient {
             WebClient client = webClientBuilder.baseUrl(baseUrl).build();
 
             Map<String, Object> response = client.get()
-                .uri(uri -> uri
-                    .path("/subjects/{subject}.json")
-                    .queryParam("limit", Math.min(limit, 50))
-                    .queryParam("offset", offset)
-                    .build(subject.toLowerCase().replace(" ", "_")))
-                .retrieve()
-                .bodyToMono(Map.class)
-                .timeout(java.time.Duration.ofSeconds(8))
-                .block();
+                    .uri(uri -> uri
+                            .path("/subjects/{subject}.json")
+                            .queryParam("limit", Math.min(limit, 50))
+                            .queryParam("offset", offset)
+                            .build(subject.toLowerCase().replace(" ", "_")))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(java.time.Duration.ofSeconds(12))
+                    .block();
 
             if (response == null) return emptySearch(subject, 0, limit);
 
@@ -379,21 +405,21 @@ public class OpenLibraryClient {
             List<Map<String, Object>> works = (List<Map<String, Object>>) response.getOrDefault("works", List.of());
 
             List<BookDto> books = works.stream()
-                .map(this::subjectWorkToBookDto)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                    .map(this::subjectWorkToBookDto)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
 
             return BookSearchResponse.builder()
-                .books(books)
-                .page(offset / Math.max(limit, 1))
-                .size(limit)
-                .totalResults(workCount)
-                .hasMore((offset + books.size()) < workCount)
-                .query(subject)
-                .build();
+                    .books(books)
+                    .page(offset / Math.max(limit, 1))
+                    .size(limit)
+                    .totalResults(workCount)
+                    .hasMore((offset + books.size()) < workCount)
+                    .query(subject)
+                    .build();
 
         } catch (Exception e) {
-            log.error("Subject browse failed for '{}': {}", subject, e.getMessage());
+            log.debug("Subject browse unavailable for '{}': {}", subject, e.getMessage());
             return emptySearch(subject, 0, limit);
         }
     }
@@ -418,10 +444,10 @@ public class OpenLibraryClient {
                 author = str(authorsList.get(0), "name");
                 if (author == null) author = "Unknown Author";
                 authors = authorsList.stream()
-                    .map(a -> str(a, "name"))
-                    .filter(Objects::nonNull)
-                    .limit(5)
-                    .collect(Collectors.toList());
+                        .map(a -> str(a, "name"))
+                        .filter(Objects::nonNull)
+                        .limit(5)
+                        .collect(Collectors.toList());
             }
 
             // Cover
@@ -436,23 +462,23 @@ public class OpenLibraryClient {
             // Subjects
             List<?> subjects = (List<?>) work.get("subject");
             List<String> genres = subjects != null
-                ? subjects.stream()
+                    ? subjects.stream()
                     .map(Object::toString)
                     .filter(s -> s.length() < 50 && !s.contains("--") && !s.matches(".*\\d{4}.*"))
                     .limit(5)
                     .collect(Collectors.toList())
-                : List.of();
+                    : List.of();
 
             return BookDto.builder()
-                .externalId(externalId)
-                .title(str(work, "title"))
-                .author(author)
-                .authors(authors)
-                .coverUrl(coverL)
-                .coverUrlSmall(coverM)
-                .publishYear(year)
-                .genres(genres)
-                .build();
+                    .externalId(externalId)
+                    .title(str(work, "title"))
+                    .author(author)
+                    .authors(authors)
+                    .coverUrl(coverL)
+                    .coverUrlSmall(coverM)
+                    .publishYear(year)
+                    .genres(genres)
+                    .build();
 
         } catch (Exception e) {
             log.debug("Failed to map subject work to BookDto: {}", e.getMessage());

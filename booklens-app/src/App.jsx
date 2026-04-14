@@ -7,18 +7,19 @@ import LoginPage from './pages/LoginPage'
 import BrowsePage from './pages/BrowsePage'
 import SearchPage from './pages/SearchPage'
 import BookDetailPage from './pages/BookDetailPage'
+import ErrorBoundary from './components/ui/ErrorBoundary'
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<ErrorBoundary><LoginPage /></ErrorBoundary>} />
       <Route element={<Layout />}>
-        <Route path="/"                  element={<HomePage />} />
-        <Route path="/log"               element={<LogBookPage />} />
-        <Route path="/profile"           element={<ProfilePage />} />
-        <Route path="/browse"            element={<BrowsePage />} />
-        <Route path="/search"            element={<SearchPage />} />
-        <Route path="/book/:externalId"  element={<BookDetailPage />} />
+        <Route path="/"                  element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
+        <Route path="/log"               element={<ErrorBoundary><LogBookPage /></ErrorBoundary>} />
+        <Route path="/profile"           element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+        <Route path="/browse"            element={<ErrorBoundary><BrowsePage /></ErrorBoundary>} />
+        <Route path="/search"            element={<ErrorBoundary><SearchPage /></ErrorBoundary>} />
+        <Route path="/book/:externalId"  element={<ErrorBoundary><BookDetailPage /></ErrorBoundary>} />
         <Route path="*"                  element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

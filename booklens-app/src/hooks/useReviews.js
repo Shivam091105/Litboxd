@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reviewsApi } from '../api/reviews'
-import { keys }       from '../api/queryKeys'
+import { keys } from '../api/queryKeys'
 
 // ── Popular reviews (home page) ───────────────────────────────────────────────
 export function usePopularReviews(size = 6) {
   return useQuery({
     queryKey: keys.reviews.popular,
-    queryFn:  () => reviewsApi.getPopular(0, size),
+    queryFn: () => reviewsApi.getPopular(0, size),
     staleTime: 5 * 60 * 1000,
   })
 }
@@ -15,8 +15,8 @@ export function usePopularReviews(size = 6) {
 export function useBookReviews(bookId, size = 10) {
   return useQuery({
     queryKey: keys.reviews.byBook(bookId),
-    queryFn:  () => reviewsApi.getByBook(bookId, 0, size),
-    enabled:  !!bookId,
+    queryFn: () => reviewsApi.getByBook(bookId, 0, size),
+    enabled: !!bookId,
   })
 }
 
@@ -24,8 +24,8 @@ export function useBookReviews(bookId, size = 10) {
 export function useUserReviews(userId, size = 10) {
   return useQuery({
     queryKey: keys.reviews.byUser(userId),
-    queryFn:  () => reviewsApi.getByUser(userId, 0, size),
-    enabled:  !!userId,
+    queryFn: () => reviewsApi.getByUser(userId, 0, size),
+    enabled: !!userId,
   })
 }
 
@@ -53,6 +53,18 @@ export function useToggleLike() {
     onSuccess: () => {
       // Refetch popular reviews and any open book review lists
       queryClient.invalidateQueries({ queryKey: keys.reviews.popular })
+    },
+  })
+}
+
+// ── Update review (mutation) ─────────────────────────────────────────────────
+export function useUpdateReview() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ reviewId, content, hasSpoiler }) =>
+      reviewsApi.update(reviewId, content, hasSpoiler),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] })
     },
   })
 }

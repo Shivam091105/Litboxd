@@ -43,7 +43,11 @@ export function useRecommendations() {
     queryKey: keys.recommendations,
     queryFn:  () => usersApi.getRecommendations(),
     enabled:  isAuthenticated,
-    staleTime: 60 * 60 * 1000,  // 1 hour — matches Redis TTL on backend
+    // staleTime: 0 so React Query always treats this as stale and will
+    // refetch whenever useLogBook calls invalidateQueries({ refetchType: 'all' }).
+    // The heavy lifting (actual computation) is cached on the backend in Redis
+    // and evicted on every log action, so the API round-trip is cheap.
+    staleTime: 0,
   })
 }
 

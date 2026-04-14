@@ -12,6 +12,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -50,7 +51,7 @@ public class BookApiService {
         // Enrich each result with our DB stats in bulk
         // (single query is more efficient than N queries in the loop)
         response.getBooks().forEach(book ->
-            enrichWithDbStats(book, null)
+                enrichWithDbStats(book, null)
         );
 
         return response;
@@ -62,16 +63,34 @@ public class BookApiService {
      * Get full detail for one book by its Open Library ID.
      * Cached by externalId for 30 minutes.
      */
+    /**
+     * Fetch and cache raw book metadata from Open Library.
+     * Does NOT include DB stats (ratings, counts) — those are dynamic and must
+     * not be baked into the cache. Stats are always added fresh by the controller.
+     */
     @Cacheable(value = "book-detail", key = "#externalId")
     public BookDto getBookDetail(String externalId) {
         log.debug("Fetching book detail from Open Library: {}", externalId);
 
         BookDto dto = openLibraryClient.fetchWork(externalId)
-            .orElseThrow(() -> new BookLensException(
-                "Book not found: " + externalId, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BookLensException(
+                        "Book not found: " + externalId, HttpStatus.NOT_FOUND));
 
-        enrichWithDbStats(dto, null);
+        // Do NOT call enrichWithDbStats here — DB stats are dynamic (change when
+        // users log/rate/review) and must not be baked into the 30-min OL cache.
+        // They are injected fresh in getBookDetailForUser / the controller.
         return dto;
+    }
+
+    /**
+     * Get full book detail with fresh DB stats (ratings, counts).
+     * Always re-fetches stats from DB; only the OL metadata is cached.
+     */
+    public BookDto getBookDetailWithStats(String externalId) {
+        BookDto dto = getBookDetail(externalId);            // OL data from cache
+        BookDto enriched = dto.toBuilder().build();         // clone so we don't mutate cache
+        enrichWithDbStats(enriched, null);                  // inject fresh DB stats
+        return enriched;
     }
 
     /**
@@ -79,22 +98,20 @@ public class BookApiService {
      * Not cached (user-specific data).
      */
     public BookDto getBookDetailForUser(String externalId, Long userId) {
-        // Fetch (possibly cached) base detail
-        BookDto base = getBookDetail(externalId);
+        // Get base OL metadata + fresh DB stats (never mutates cache)
+        BookDto base = getBookDetailWithStats(externalId);
 
-        // Clone and inject user-specific fields
+        // Inject user-specific fields on top of the already-cloned object
         BookDto.BookDtoBuilder enriched = base.toBuilder();
 
-        // Check user's log
         bookLogRepository.findByUserIdAndExternalBookId(userId, externalId)
-            .ifPresent(log -> {
-                enriched.userStatus(log.getStatus().name());
-                enriched.userRating(log.getRatingAsStars());
-            });
+                .ifPresent(log -> {
+                    enriched.userStatus(log.getStatus().name());
+                    enriched.userRating(log.getRatingAsStars());
+                });
 
-        // Check user's review
-        boolean hasReview = reviewRepository.existsByUserIdAndExternalBookId(userId, externalId);
-        enriched.userHasReview(hasReview);
+        enriched.userHasReview(
+                reviewRepository.existsByUserIdAndExternalBookId(userId, externalId));
 
         return enriched.build();
     }
@@ -111,9 +128,10 @@ public class BookApiService {
         if (dto.getExternalId() == null) return;
 
         try {
-            Object[] stats = bookLogRepository.getBookStats(dto.getExternalId());
-            if (stats != null && stats[0] != null) {
-                dto.setLogsCount(((Number) stats[0]).intValue());
+            List<Object[]> statsList = bookLogRepository.getBookStats(dto.getExternalId());
+            if (statsList != null && !statsList.isEmpty() && statsList.get(0) != null) {
+                Object[] stats = statsList.get(0);
+                dto.setLogsCount(stats[0] != null ? ((Number) stats[0]).intValue() : 0);
                 dto.setAverageRating(stats[1] != null ? ((Number) stats[1]).doubleValue() : 0.0);
                 dto.setRatingsCount(stats[2] != null ? ((Number) stats[2]).intValue() : 0);
             } else {
@@ -136,12 +154,12 @@ public class BookApiService {
         // User-specific
         if (userId != null) {
             bookLogRepository.findByUserIdAndExternalBookId(userId, dto.getExternalId())
-                .ifPresent(log -> {
-                    dto.setUserStatus(log.getStatus().name());
-                    dto.setUserRating(log.getRatingAsStars());
-                });
+                    .ifPresent(log -> {
+                        dto.setUserStatus(log.getStatus().name());
+                        dto.setUserRating(log.getRatingAsStars());
+                    });
             dto.setUserHasReview(
-                reviewRepository.existsByUserIdAndExternalBookId(userId, dto.getExternalId()));
+                    reviewRepository.existsByUserIdAndExternalBookId(userId, dto.getExternalId()));
         }
     }
 
@@ -154,12 +172,7 @@ public class BookApiService {
     @Cacheable(value = "book-search", key = "'subject_' + #subject + '_' + #limit + '_' + #offset")
     public BookSearchResponse searchBySubject(String subject, int limit, int offset) {
         log.debug("Browsing Open Library subject: '{}' limit={} offset={}", subject, limit, offset);
-        BookSearchResponse response = openLibraryClient.searchBySubject(subject, limit, offset);
-
-        response.getBooks().forEach(book ->
-            enrichWithDbStats(book, null)
-        );
-
-        return response;
+        // Cache raw OL data only — do not bake in DB stats
+        return openLibraryClient.searchBySubject(subject, limit, offset);
     }
 }

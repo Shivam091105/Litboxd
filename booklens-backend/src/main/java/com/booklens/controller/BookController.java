@@ -57,15 +57,15 @@ public class BookController {
      */
     @GetMapping("/search")
     public ResponseEntity<BookSearchResponse> search(
-        @RequestParam String q,
-        @RequestParam(defaultValue = "0")  int page,
-        @RequestParam(defaultValue = "20") int size,
-        @AuthenticationPrincipal UserDetails principal
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserDetails principal
     ) {
         if (q == null || q.trim().length() < 2) {
             return ResponseEntity.ok(BookSearchResponse.builder()
-                .books(List.of()).page(0).size(size).totalResults(0).hasMore(false).query(q)
-                .build());
+                    .books(List.of()).page(0).size(size).totalResults(0).hasMore(false).query(q)
+                    .build());
         }
 
         BookSearchResponse response = bookApiService.search(q.trim(), page, Math.min(size, 40));
@@ -74,7 +74,7 @@ public class BookController {
         if (principal != null) {
             Long userId = resolveUserId(principal);
             response.getBooks().forEach(book ->
-                bookApiService.enrichWithDbStats(book, userId)
+                    bookApiService.enrichWithDbStats(book, userId)
             );
         }
 
@@ -108,12 +108,12 @@ public class BookController {
      */
     @GetMapping("/{externalId}")
     public ResponseEntity<BookDto> getBook(
-        @PathVariable String externalId,
-        @AuthenticationPrincipal UserDetails principal
+            @PathVariable String externalId,
+            @AuthenticationPrincipal UserDetails principal
     ) {
         BookDto book = principal != null
-            ? bookApiService.getBookDetailForUser(externalId, resolveUserId(principal))
-            : bookApiService.getBookDetail(externalId);
+                ? bookApiService.getBookDetailForUser(externalId, resolveUserId(principal))
+                : bookApiService.getBookDetailWithStats(externalId);
 
         return ResponseEntity.ok(book);
     }
@@ -132,29 +132,29 @@ public class BookController {
      */
     @GetMapping("/{externalId}/rating-distribution")
     public ResponseEntity<List<Map<String, Object>>> getRatingDistribution(
-        @PathVariable String externalId
+            @PathVariable String externalId
     ) {
         List<Object[]> raw = bookLogRepository.getRatingDistributionByExternalId(externalId);
 
         // Calculate total for percentage
         long total = raw.stream()
-            .mapToLong(row -> ((Number) row[1]).longValue())
-            .sum();
+                .mapToLong(row -> ((Number) row[1]).longValue())
+                .sum();
 
         List<Map<String, Object>> dist = raw.stream()
-            .map(row -> {
-                int  internalRating = ((Number) row[0]).intValue();
-                long count          = ((Number) row[1]).longValue();
-                double stars        = internalRating / 2.0;  // convert 2-10 → 1.0-5.0
-                double pct          = total > 0 ? (count * 100.0 / total) : 0.0;
+                .map(row -> {
+                    int  internalRating = ((Number) row[0]).intValue();
+                    long count          = ((Number) row[1]).longValue();
+                    double stars        = internalRating / 2.0;  // convert 2-10 → 1.0-5.0
+                    double pct          = total > 0 ? (count * 100.0 / total) : 0.0;
 
-                return Map.<String, Object>of(
-                    "stars",      stars,
-                    "count",      count,
-                    "percentage", Math.round(pct * 10) / 10.0
-                );
-            })
-            .collect(Collectors.toList());
+                    return Map.<String, Object>of(
+                            "stars",      stars,
+                            "count",      count,
+                            "percentage", Math.round(pct * 10) / 10.0
+                    );
+                })
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(dist);
     }
@@ -169,19 +169,19 @@ public class BookController {
      */
     @GetMapping("/subjects/{subject}")
     public ResponseEntity<BookSearchResponse> browseBySubject(
-        @PathVariable String subject,
-        @RequestParam(defaultValue = "20") int limit,
-        @RequestParam(defaultValue = "0")  int offset
+            @PathVariable String subject,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "0")  int offset
     ) {
         return ResponseEntity.ok(
-            bookApiService.searchBySubject(subject, Math.min(limit, 50), offset)
+                bookApiService.searchBySubject(subject, Math.min(limit, 50), offset)
         );
     }
 
     // ── Helper ────────────────────────────────────────────────────────────
     private Long resolveUserId(UserDetails principal) {
         return userRepository.findByUsername(principal.getUsername())
-            .orElseThrow(() -> new BookLensException("User not found", HttpStatus.UNAUTHORIZED))
-            .getId();
+                .orElseThrow(() -> new BookLensException("User not found", HttpStatus.UNAUTHORIZED))
+                .getId();
     }
 }

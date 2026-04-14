@@ -33,8 +33,8 @@ public class UserController {
      */
     @GetMapping("/users/{username}")
     public ResponseEntity<Map<String, Object>> getProfile(
-        @PathVariable String username,
-        @AuthenticationPrincipal UserDetails principal
+            @PathVariable String username,
+            @AuthenticationPrincipal UserDetails principal
     ) {
         Long currentUserId = principal != null ? resolveUserId(principal) : null;
         return ResponseEntity.ok(userService.getProfile(username, currentUserId));
@@ -46,8 +46,8 @@ public class UserController {
      */
     @PatchMapping("/me")
     public ResponseEntity<Map<String, Object>> updateProfile(
-        @RequestBody Map<String, Object> updates,
-        @AuthenticationPrincipal UserDetails principal
+            @RequestBody Map<String, Object> updates,
+            @AuthenticationPrincipal UserDetails principal
     ) {
         Long userId = resolveUserId(principal);
         userService.updateProfile(userId, updates);
@@ -59,8 +59,8 @@ public class UserController {
      */
     @PostMapping("/users/{userId}/follow")
     public ResponseEntity<Map<String, Object>> follow(
-        @PathVariable Long userId,
-        @AuthenticationPrincipal UserDetails principal
+            @PathVariable Long userId,
+            @AuthenticationPrincipal UserDetails principal
     ) {
         return ResponseEntity.ok(userService.follow(resolveUserId(principal), userId));
     }
@@ -70,8 +70,8 @@ public class UserController {
      */
     @DeleteMapping("/users/{userId}/follow")
     public ResponseEntity<Map<String, Object>> unfollow(
-        @PathVariable Long userId,
-        @AuthenticationPrincipal UserDetails principal
+            @PathVariable Long userId,
+            @AuthenticationPrincipal UserDetails principal
     ) {
         return ResponseEntity.ok(userService.unfollow(resolveUserId(principal), userId));
     }
@@ -82,8 +82,8 @@ public class UserController {
      */
     @GetMapping("/me/suggestions")
     public ResponseEntity<?> getSuggestedUsers(
-        @RequestParam(defaultValue = "4") int limit,
-        @AuthenticationPrincipal UserDetails principal
+            @RequestParam(defaultValue = "4") int limit,
+            @AuthenticationPrincipal UserDetails principal
     ) {
         return ResponseEntity.ok(userService.getSuggestedUsers(resolveUserId(principal), limit));
     }
@@ -91,65 +91,154 @@ public class UserController {
     /**
      * GET /api/v1/me/recommendations
      *
-     * Personalised book recommendations.
-     * Uses collaborative + content-based hybrid engine.
-     * Recommendations are based on externalBookIds the user has rated.
+     * Seed strategy (all feeds the pool — updates on every log/rating/review):
+     *   Tier 1 — highly rated (≥3.5★): search by genre AND author
+     *   Tier 2 — any rated book:        search by genre
+     *   Tier 3 — currently reading:     search by genre
+     *   Tier 4 — any logged (unrated):  genre search as last resort
      *
-     * Returns list of BookDto enriched with score and reason.
+     * Deduplicates against all logged books so user never sees something already read.
+     * Result is cached per-user in Redis; evicted by BookLogService and ReviewService.
      */
     @GetMapping("/me/recommendations")
     public ResponseEntity<List<Map<String, Object>>> getRecommendations(
-        @AuthenticationPrincipal UserDetails principal
+            @AuthenticationPrincipal UserDetails principal
     ) {
         Long userId = resolveUserId(principal);
 
-        // Fetch the user's highly rated book IDs
-        List<String> likedIds = bookLogRepository.findHighlyRatedExternalBookIdsByUserId(userId);
-        List<String> allLoggedIds = bookLogRepository.findExternalBookIdsByUserId(userId);
+        List<String> allLoggedIds      = bookLogRepository.findExternalBookIdsByUserId(userId);
+        List<String> highlyRatedIds    = bookLogRepository.findHighlyRatedExternalBookIdsByUserId(userId);
+        List<String> anyRatedIds       = bookLogRepository.findAnyRatedExternalBookIdsByUserId(userId);
+        List<String> currentlyReading  = bookLogRepository.findCurrentlyReadingExternalBookIdsByUserId(userId);
 
-        if (likedIds.isEmpty()) {
-            // New user — return empty list with a helpful message
+        // Need at least one signal to generate recommendations
+        if (allLoggedIds.isEmpty()) {
             return ResponseEntity.ok(List.of());
         }
 
-        // For each liked book, find similar ones via Open Library subjects
-        // This is a lightweight content-based approach that works without storing book data
-        List<Map<String, Object>> recs = likedIds.stream()
-            .limit(5)  // use top 5 liked books as seeds
-            .flatMap(bookId -> {
-                try {
-                    BookDto book = bookApiService.getBookDetail(bookId);
-                    return book.getGenres() != null && !book.getGenres().isEmpty()
-                        ? bookApiService.search(
-                              book.getGenres().get(0), 0, 8
-                          ).getBooks().stream()
-                        : java.util.stream.Stream.<BookDto>empty();
-                } catch (Exception e) {
-                    return java.util.stream.Stream.<BookDto>empty();
-                }
-            })
-            .filter(b -> !allLoggedIds.contains(b.getExternalId()))  // exclude already logged
-            .distinct()
-            .limit(20)
-            .map(b -> Map.<String, Object>of(
-                "externalId",    b.getExternalId(),
-                "title",         b.getTitle() != null ? b.getTitle() : "",
-                "author",        b.getAuthor() != null ? b.getAuthor() : "",
-                "coverUrl",      b.getCoverUrl() != null ? b.getCoverUrl() : "",
-                "averageRating", b.getAverageRating() != null ? b.getAverageRating() : 0.0,
-                "ratingsCount",  b.getRatingsCount() != null ? b.getRatingsCount() : 0,
-                "genres",        b.getGenres() != null ? b.getGenres() : List.of(),
-                "reason",        "Based on your reading taste"
-            ))
-            .collect(Collectors.toList());
+        java.util.Set<String> seen = java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
+        List<Map<String, Object>> recs = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
-        return ResponseEntity.ok(recs);
+        // ── Tier 1: highly-rated seeds → genre + author ───────────────────
+        for (String bookId : highlyRatedIds.stream().limit(3).collect(Collectors.toList())) {
+            if (recs.size() >= 20) break;
+            try {
+                BookDto seed = bookApiService.getBookDetail(bookId);
+                String seedTitle = seed.getTitle() != null ? seed.getTitle() : "a book you loved";
+
+                // By genre (primary genre of this book)
+                if (seed.getGenres() != null && !seed.getGenres().isEmpty()) {
+                    addCandidates(recs, seen, allLoggedIds,
+                            seed.getGenres().get(0),
+                            "Similar to “" + seedTitle + "”", 4);
+                }
+                // By second genre (diversity)
+                if (seed.getGenres() != null && seed.getGenres().size() > 1) {
+                    addCandidates(recs, seen, allLoggedIds,
+                            seed.getGenres().get(1),
+                            "In the genre of “" + seedTitle + "”", 2);
+                }
+                // By author
+                if (seed.getAuthor() != null && !seed.getAuthor().isBlank()
+                        && !seed.getAuthor().equals("Unknown Author")) {
+                    addCandidates(recs, seen, allLoggedIds,
+                            seed.getAuthor(),
+                            "More by " + seed.getAuthor(), 3);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // ── Tier 2: any rated book (lower ratings still give signal) ──────
+        List<String> lowerRatedIds = anyRatedIds.stream()
+                .filter(id -> !highlyRatedIds.contains(id))
+                .limit(2)
+                .collect(Collectors.toList());
+
+        for (String bookId : lowerRatedIds) {
+            if (recs.size() >= 20) break;
+            try {
+                BookDto seed = bookApiService.getBookDetail(bookId);
+                String seedTitle = seed.getTitle() != null ? seed.getTitle() : "your reading list";
+                if (seed.getGenres() != null && !seed.getGenres().isEmpty()) {
+                    addCandidates(recs, seen, allLoggedIds,
+                            seed.getGenres().get(0),
+                            "Because you rated “" + seedTitle + "”", 3);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // ── Tier 3: currently reading ──────────────────────────────────────
+        for (String bookId : currentlyReading.stream().limit(2).collect(Collectors.toList())) {
+            if (recs.size() >= 20) break;
+            try {
+                BookDto seed = bookApiService.getBookDetail(bookId);
+                String seedTitle = seed.getTitle() != null ? seed.getTitle() : "what you're reading";
+                if (seed.getGenres() != null && !seed.getGenres().isEmpty()) {
+                    addCandidates(recs, seen, allLoggedIds,
+                            seed.getGenres().get(0),
+                            "Because you're reading “" + seedTitle + "”", 3);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // ── Tier 4: unrated logged books as last resort ────────────────────
+        if (recs.size() < 8) {
+            List<String> unratedIds = allLoggedIds.stream()
+                    .filter(id -> !anyRatedIds.contains(id) && !currentlyReading.contains(id))
+                    .limit(3)
+                    .collect(Collectors.toList());
+            for (String bookId : unratedIds) {
+                if (recs.size() >= 20) break;
+                try {
+                    BookDto seed = bookApiService.getBookDetail(bookId);
+                    String seedTitle = seed.getTitle() != null ? seed.getTitle() : "a book you logged";
+                    if (seed.getGenres() != null && !seed.getGenres().isEmpty()) {
+                        addCandidates(recs, seen, allLoggedIds,
+                                seed.getGenres().get(0),
+                                "Because you logged “" + seedTitle + "”", 2);
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        return ResponseEntity.ok(recs.stream().limit(12).collect(Collectors.toList()));
     }
 
+    private void addCandidates(
+            List<Map<String, Object>> recs,
+            java.util.Set<String> seen,
+            List<String> exclude,
+            String query,
+            String reason,
+            int limit
+    ) {
+        if (query == null || query.isBlank() || recs.size() >= 20) return;
+        try {
+            bookApiService.search(query, 0, 12).getBooks().stream()
+                    .filter(b -> b.getExternalId() != null
+                            && !exclude.contains(b.getExternalId())
+                            && seen.add(b.getExternalId()))
+                    .limit(limit)
+                    .forEach(b -> {
+                        if (recs.size() >= 20) return;
+                        java.util.Map<String, Object> entry = new java.util.LinkedHashMap<>();
+                        entry.put("externalId",    b.getExternalId());
+                        entry.put("title",         b.getTitle()         != null ? b.getTitle()         : "");
+                        entry.put("author",        b.getAuthor()        != null ? b.getAuthor()        : "");
+                        entry.put("coverUrl",      b.getCoverUrl()      != null ? b.getCoverUrl()      : "");
+                        entry.put("coverUrlSmall", b.getCoverUrlSmall() != null ? b.getCoverUrlSmall() : "");
+                        entry.put("averageRating", b.getAverageRating() != null ? b.getAverageRating() : 0.0);
+                        entry.put("ratingsCount",  b.getRatingsCount()  != null ? b.getRatingsCount()  : 0);
+                        entry.put("genres",        b.getGenres()        != null ? b.getGenres()        : List.of());
+                        entry.put("reason",        reason);
+                        recs.add(entry);
+                    });
+        } catch (Exception ignored) {}
+    }
     // ── Helper ────────────────────────────────────────────────────────────
     private Long resolveUserId(UserDetails principal) {
         return userRepository.findByUsername(principal.getUsername())
-            .orElseThrow(() -> new BookLensException("User not found", HttpStatus.UNAUTHORIZED))
-            .getId();
+                .orElseThrow(() -> new BookLensException("User not found", HttpStatus.UNAUTHORIZED))
+                .getId();
     }
 }

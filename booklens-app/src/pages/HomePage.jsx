@@ -111,7 +111,7 @@ export default function HomePage() {
           {booksLoading
             ? Array.from({ length: 8 }).map((_, i) => <BookCardSkeleton key={i} />)
             : popularBooks.length > 0
-              ? popularBooks.map(book => <BookCard key={book.id} book={book} />)
+              ? popularBooks.map((book, i) => <BookCard key={book.externalId ?? book.id ?? i} book={book} />)
               : <EmptyState message="No books yet. Be the first to log one!" />
           }
         </div>
@@ -122,16 +122,18 @@ export default function HomePage() {
         <div className={styles.section} style={{ paddingTop: 0 }}>
           <SectionHeader title="Recommended for you" linkLabel="See all →" />
           <div className={styles.booksGrid}>
-            {recommendations.slice(0, 8).map(rec => (
+            {recommendations.slice(0, 8).map((rec, i) => (
               <BookCard
-                key={rec.id}
+                key={rec.externalId ?? rec.id ?? i}
                 book={{
-                  id: rec.id,
+                  externalId: rec.externalId,
                   title: rec.title,
                   author: rec.author,
-                  coverColor: 'bc' + ((rec.id % 8) + 1),
-                  rating: rec.averageRating,
-                  ratingCount: rec.ratingsCount,
+                  coverUrl: rec.coverUrl,
+                  coverUrlSmall: rec.coverUrlSmall,
+                  coverColor: 'bc' + ((i % 8) + 1),
+                  averageRating: rec.averageRating,
+                  ratingsCount: rec.ratingsCount,
                 }}
                 badge={rec.reason}
               />
@@ -214,16 +216,21 @@ function normaliseLog(log) {
 }
 
 function normaliseReview(r) {
+  // ReviewDto uses flat fields: bookTitle, bookAuthor, username (no nested .book/.user)
+  const username = r.username ?? r.user?.username ?? 'Anonymous'
+  const colIdx = (s => { if (!s) return 1; let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return (h % 8) + 1 })(r.bookExternalId)
   return {
     id: r.id,
-    bookTitle: r.book?.title,
-    bookAuthor: r.book?.author,
-    coverColor: 'bc' + ((r.book?.id % 8) + 1),
-    username: r.user?.username,
-    userInitial: r.user?.username?.[0]?.toUpperCase() ?? '?',
+    bookTitle: r.bookTitle ?? r.book?.title ?? 'Unknown book',
+    bookAuthor: r.bookAuthor ?? r.book?.author ?? '',
+    bookCoverUrl: r.bookCoverUrl ?? null,
+    bookExternalId: r.bookExternalId ?? null,
+    coverColor: 'bc' + colIdx,
+    username,
+    userInitial: (username)[0]?.toUpperCase() ?? '?',
     userColor: 'linear-gradient(135deg,#1c5e3a,#0d2e1a)',
-    rating: 5,
-    text: r.content,
+    rating: r.rating ?? 0,
+    text: r.content ?? '',
     likes: r.likesCount ?? 0,
     date: formatDate(r.createdAt),
     isPopular: (r.likesCount ?? 0) > 50,

@@ -1,27 +1,67 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReviewCard from '../components/book/ReviewCard'
 import { StatusPill } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
-import { useProfile, useDiary, useChallenge } from '../hooks/useUser'
+import { useProfile, useDiary, useChallenge, useUpdateProfile } from '../hooks/useUser'
 import { useUserReviews } from '../hooks/useReviews'
+import { listsApi } from '../api/lists'
 import useAuthStore from '../store/authStore'
+import { keys } from '../api/queryKeys'
 import styles from './ProfilePage.module.css'
 
-const TABS = ['Overview', 'Diary', 'Reviews', 'Lists', 'Watchlist', 'Network']
+const TABS = ['Overview', 'Diary', 'Reviews', 'Lists', 'Network']
+const DEFAULT_LISTS = ['Read', 'Currently Reading', 'Want to Read']
 
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+function colorIndex(str) {
+  if (!str) return 1
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  return (h % 8) + 1
+}
+function formatDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+function normaliseReview(r) {
+  const username = r.username ?? r.user?.username ?? 'Anonymous'
+  return {
+    id: r.id,
+    bookTitle: r.bookTitle ?? r.book?.title ?? '',
+    bookAuthor: r.bookAuthor ?? r.book?.author ?? '',
+    bookCoverUrl: r.bookCoverUrl ?? null,
+    bookExternalId: r.bookExternalId ?? null,
+    coverColor: 'bc' + colorIndex(r.bookExternalId ?? ''),
+    username,
+    userInitial: (username || '?')[0].toUpperCase(),
+    userColor: 'linear-gradient(135deg,#1c5e3a,#0d2e1a)',
+    rating: r.rating != null ? Math.round(r.rating) : 0,
+    content: r.content ?? '',
+    text: r.content ?? '',
+    likes: r.likesCount ?? 0,
+    likesCount: r.likesCount ?? 0,
+    date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    }) : '',
+    isPopular: (r.likesCount ?? 0) > 50,
+  }
+}
+
+/* ── Main component ──────────────────────────────────────────────────────── */
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('Overview')
+  const [showEdit, setShowEdit] = useState(false)
+  const [showFavEdit, setShowFavEdit] = useState(false)
   const { user, isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
-
-  // Use logged-in user's username, or redirect
   const username = user?.username
 
   const { data: profile, isLoading: profileLoading } = useProfile(username)
-  const { data: diaryData, isLoading: diaryLoading }  = useDiary(null, 20)
-  const { data: reviewsData }                          = useUserReviews(user?.id)
-  const { data: challenge }                            = useChallenge()
+  const { data: diaryData, isLoading: diaryLoading } = useDiary(null, 50)
+  const { data: reviewsData, isLoading: reviewsLoading } = useUserReviews(user?.id)
+  const { data: challenge } = useChallenge()
 
   if (!isAuthenticated) {
     return (
@@ -32,33 +72,23 @@ export default function ProfilePage() {
         <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
           Sign in to view and manage your profile.
         </p>
-        <button
-          onClick={() => navigate('/login')}
-          style={{
-            background: 'var(--accent-green)', color: '#0d0f0e', border: 'none',
-            borderRadius: 20, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer'
-          }}
-        >
-          Sign in
-        </button>
+        <button onClick={() => navigate('/login')} style={{
+          background: 'var(--accent-green)', color: '#0d0f0e', border: 'none',
+          borderRadius: 20, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer'
+        }}>Sign in</button>
       </div>
     )
   }
 
-  const diaryItems   = Array.isArray(diaryData)   ? diaryData   : diaryData?.content   ?? []
-  const reviewItems  = Array.isArray(reviewsData)  ? reviewsData : reviewsData?.content  ?? []
-
-  // Build display name initials
+  const diaryItems = Array.isArray(diaryData) ? diaryData : diaryData?.content ?? []
+  const reviewItems = Array.isArray(reviewsData) ? reviewsData : reviewsData?.content ?? []
   const initials = profile?.displayName
     ? profile.displayName.slice(0, 2).toUpperCase()
     : username?.slice(0, 2).toUpperCase() ?? 'BL'
 
   return (
     <div>
-      {/* Banner */}
       <div className={styles.banner} />
-
-      {/* Profile header */}
       <div className={styles.headerWrap}>
         <div className={styles.headerInner}>
           <div className={styles.avatarXl}>{initials}</div>
@@ -73,207 +103,209 @@ export default function ProfilePage() {
                 <div className={styles.name}>{profile?.displayName || username}</div>
                 <div className={styles.handle}>@{profile?.username || username}</div>
                 {profile?.bio && <div className={styles.bio}>{profile.bio}</div>}
+                {profile?.location && <div className={styles.location}>{profile.location}</div>}
               </>
             )}
           </div>
           <div className={styles.actions}>
-            <button className={styles.btnOutline} type="button">Edit profile</button>
+            <button className={styles.btnOutline} type="button" onClick={() => setShowEdit(true)}>
+              Edit profile
+            </button>
             <Link to="/log" className={styles.btnPrimary}>+ Log book</Link>
           </div>
         </div>
       </div>
 
-      {/* Sticky tab bar */}
+      {/* Tab bar */}
       <div className={styles.tabBar}>
         <div className={styles.tabBarInner}>
           {TABS.map(t => (
-            <button
-              key={t}
-              type="button"
+            <button key={t} type="button"
               className={`${styles.tab} ${activeTab === t ? styles.tabActive : ''}`}
               onClick={() => setActiveTab(t)}
             >
               {t}
+              {t === 'Reviews' && reviewItems.length > 0 && (
+                <span className={styles.tabCount}>{reviewItems.length}</span>
+              )}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── TAB: OVERVIEW ── */}
+      {/* ── OVERVIEW ── */}
       {activeTab === 'Overview' && (
         <div className={styles.body}>
           <div className={styles.main}>
-
-            {/* Stats grid */}
+            {/* Stats */}
             <div className={styles.statsGrid}>
               {profileLoading
                 ? Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className={styles.statBox}>
-                      <Skeleton height="26px" width="60px" style={{ margin: '0 auto 6px' }} />
-                      <Skeleton height="11px" width="50px" style={{ margin: '0 auto' }} />
-                    </div>
-                  ))
+                  <div key={i} className={styles.statBox}>
+                    <Skeleton height="26px" width="50px" style={{ margin: '0 auto 6px' }} />
+                    <Skeleton height="11px" width="44px" style={{ margin: '0 auto' }} />
+                  </div>
+                ))
                 : [
-                    ['Books',     profile?.booksRead     ?? 0],
-                    ['Reviews',   profile?.reviewsCount  ?? 0],
-                    ['Lists',     profile?.listsCount    ?? 0],
-                    ['Followers', profile?.followersCount ?? 0],
-                    ['Following', profile?.followingCount ?? 0],
-                  ].map(([label, val]) => (
-                    <div key={label} className={styles.statBox}>
-                      <div className={styles.sbNum}>{val}</div>
-                      <div className={styles.sbLabel}>{label}</div>
-                    </div>
-                  ))
+                  ['Books', profile?.booksRead ?? 0, () => setActiveTab('Diary')],
+                  ['Reviews', reviewItems.length, () => setActiveTab('Reviews')],
+                  ['Lists', profile?.listsCount ?? 0, () => setActiveTab('Lists')],
+                  ['Followers', profile?.followersCount ?? 0, null],
+                  ['Following', profile?.followingCount ?? 0, null],
+                ].map(([label, val, onClick]) => (
+                  <div key={label} className={styles.statBox} onClick={onClick || undefined}
+                    style={onClick ? { cursor: 'pointer' } : {}}>
+                    <div className={styles.sbNum}>{val}</div>
+                    <div className={styles.sbLabel}>{label}</div>
+                  </div>
+                ))
               }
             </div>
 
             {/* Recent reads */}
             <div className={styles.subHeader}>
               <h3 className={styles.subTitle}>Recent reads</h3>
-              <button className={styles.subLink} onClick={() => setActiveTab('Diary')}>View diary →</button>
+              <button className={styles.subLink} onClick={() => setActiveTab('Diary')}>View diary</button>
             </div>
-            <div className={styles.recentCovers} style={{ marginBottom: 32 }}>
+            <div className={styles.recentCovers}>
               {diaryLoading
-                ? Array.from({ length: 7 }).map((_, i) => (
-                    <Skeleton key={i} width="64px" height="96px" borderRadius="6px" />
-                  ))
+                ? Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} width="60px" height="90px" borderRadius="6px" />)
                 : diaryItems.slice(0, 7).map(log => (
-                    log.bookCoverUrl ? (
-                      <img
-                        key={log.id}
-                        src={log.bookCoverUrl}
-                        alt={log.bookTitle}
-                        className={styles.rCover}
-                        style={{ width: 64, height: 96, objectFit: 'cover', borderRadius: 6 }}
-                        onError={e => e.target.style.display = 'none'}
-                      />
-                    ) : (
-                      <div
-                        key={log.id}
-                        className={`${styles.rCover} bc${((log.bookExternalId?.charCodeAt(2) ?? 1) % 8) + 1}`}
-                        title={log.bookTitle}
-                      />
-                    )
-                  ))
+                  log.bookCoverUrl ? (
+                    <img key={log.id} src={log.bookCoverUrl} alt={log.bookTitle}
+                      className={styles.rCover}
+                      onClick={() => navigate(`/book/${log.bookExternalId}`)}
+                      onError={e => { e.target.style.display = 'none' }} />
+                  ) : (
+                    <div key={log.id}
+                      className={`${styles.rCover} bc${colorIndex(log.bookExternalId)}`}
+                      title={log.bookTitle}
+                      onClick={() => navigate(`/book/${log.bookExternalId}`)} />
+                  )
+                ))
               }
+              {!diaryLoading && diaryItems.length === 0 && (
+                <p className={styles.emptyInline}>
+                  No books logged yet. <Link to="/browse" style={{ color: 'var(--accent-green)' }}>Browse books</Link>
+                </p>
+              )}
             </div>
 
             {/* Reading challenge */}
             {challenge && (
-              <>
-                <div className={styles.subHeader} style={{ marginTop: 8 }}>
-                  <h3 className={styles.subTitle}>Reading challenge {new Date().getFullYear()}</h3>
+              <div className={styles.challengeBox}>
+                <div className={styles.challengeTop}>
+                  <div>
+                    <span className={styles.challengeNum}>{challenge.booksRead}</span>
+                    <span className={styles.challengeOf}> / {challenge.goal || 36} books</span>
+                  </div>
+                  <span className={styles.challengeYear}>{new Date().getFullYear()} challenge</span>
                 </div>
-                <div style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 32
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, fontWeight: 700 }}>
-                      {challenge.booksRead}
-                    </span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: 13, alignSelf: 'flex-end' }}>
-                      / {challenge.goal || 36} books
-                    </span>
-                  </div>
-                  <div style={{ height: 6, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
-                    <div style={{
-                      height: '100%', borderRadius: 3,
-                      background: 'linear-gradient(90deg, var(--accent-green), #00e085)',
-                      width: `${Math.min(100, challenge.percent)}%`,
-                      transition: 'width 1s ease',
-                      boxShadow: '0 0 8px rgba(0,200,117,0.4)'
-                    }} />
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {challenge.percent}% complete
-                  </div>
+                <div className={styles.progressBar}>
+                  <div className={styles.progressFill} style={{ width: `${Math.min(100, challenge.percent)}%` }} />
                 </div>
-              </>
+                <div className={styles.challengeLabel}>{challenge.percent}% complete</div>
+              </div>
             )}
 
             {/* Recent reviews */}
-            <div className={styles.subHeader}>
+            <div className={styles.subHeader} style={{ marginTop: 32 }}>
               <h3 className={styles.subTitle}>Recent reviews</h3>
-              <button className={styles.subLink} onClick={() => setActiveTab('Reviews')}>All reviews →</button>
+              <button className={styles.subLink} onClick={() => setActiveTab('Reviews')}>All reviews</button>
             </div>
-            <div className={styles.reviewsList}>
-              {reviewItems.slice(0, 2).map(r => (
-                <ReviewCard key={r.id} review={normaliseReview(r)} />
-              ))}
-              {reviewItems.length === 0 && !diaryLoading && (
-                <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                  No reviews yet. <Link to="/log" style={{ color: 'var(--accent-green)' }}>Log a book</Link> to write one.
-                </p>
-              )}
-            </div>
+            {reviewsLoading ? (
+              <Skeleton height="120px" borderRadius="10px" />
+            ) : reviewItems.length > 0 ? (
+              <div className={styles.reviewsList}>
+                {reviewItems.slice(0, 2).map(r => (
+                  <ReviewCard key={r.id} review={normaliseReview(r)} />
+                ))}
+              </div>
+            ) : (
+              <p className={styles.emptyInline}>No reviews yet. Log a book and share your thoughts.</p>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className={styles.sidebar}>
             <div className={styles.widget}>
-              <div className={styles.widgetTitle}>Favourite books</div>
-              <div className={styles.favGrid}>
-                {diaryItems.slice(0, 4).map(log => (
-                  log.bookCoverUrl ? (
-                    <img key={log.id} src={log.bookCoverUrl} alt={log.bookTitle} className={styles.favCover} style={{ objectFit: 'cover' }} onError={e => e.target.style.display='none'} />
-                  ) : (
-                    <div key={log.id} className={`${styles.favCover} bc${((log.bookExternalId?.charCodeAt(2) ?? 1) % 8) + 1}`} />
-                  )
-                ))}
-                {Array.from({ length: Math.max(0, 4 - diaryItems.slice(0, 4).length) }).map((_, i) => (
-                  <div key={`empty-${i}`} className={styles.favCover} style={{
-                    background: 'var(--bg-elevated)', border: '1px dashed var(--border-light)'
-                  }} />
-                ))}
+              <div className={styles.widgetHeader}>
+                <div className={styles.widgetTitle}>Favourite books</div>
+                <button className={styles.widgetEdit} onClick={() => setShowFavEdit(true)}>Edit</button>
               </div>
+              <FavouriteBooks diaryItems={diaryItems} navigate={navigate} userId={user?.id} />
             </div>
-
             <div className={styles.widget}>
               <div className={styles.widgetTitle}>Account</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className={styles.accountInfo}>
+                <div className={styles.accountRow}>
+                  <span className={styles.accountLabel}>Username</span>
+                  <span className={styles.accountValue}>@{profile?.username || username}</span>
+                </div>
                 {profile?.location && (
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                    📍 {profile.location}
+                  <div className={styles.accountRow}>
+                    <span className={styles.accountLabel}>Location</span>
+                    <span className={styles.accountValue}>{profile.location}</span>
                   </div>
                 )}
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  Member since {profile?.memberSince
-                    ? new Date(profile.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                    : '—'}
+                <div className={styles.accountRow}>
+                  <span className={styles.accountLabel}>Member since</span>
+                  <span className={styles.accountValue}>
+                    {profile?.memberSince
+                      ? new Date(profile.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                      : '—'}
+                  </span>
                 </div>
+                {profile?.readingGoal && (
+                  <div className={styles.accountRow}>
+                    <span className={styles.accountLabel}>Goal</span>
+                    <span className={styles.accountValue}>{profile.readingGoal} books / year</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── TAB: DIARY ── */}
+      {/* ── DIARY TAB ── */}
       {activeTab === 'Diary' && (
         <div className={styles.tabContent}>
-          <div className={styles.subHeader}><h3 className={styles.subTitle}>Reading diary</h3></div>
+          <div className={styles.subHeader}>
+            <h3 className={styles.subTitle}>Reading diary</h3>
+            <span className={styles.subMeta}>{diaryItems.length} entries</span>
+          </div>
           {diaryLoading ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading diary…</p>
+            <div className={styles.diaryList}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className={styles.diaryItem}>
+                  <Skeleton width="44px" height="66px" borderRadius="6px" />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton height="14px" width="200px" style={{ marginBottom: 6 }} />
+                    <Skeleton height="12px" width="120px" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : diaryItems.length > 0 ? (
             <div className={styles.diaryList}>
               {diaryItems.map(log => (
-                <div key={log.id} className={styles.diaryItem}>
+                <div key={log.id} className={styles.diaryItem}
+                  onClick={() => navigate(`/book/${log.bookExternalId}`)}>
                   {log.bookCoverUrl ? (
-                    <img src={log.bookCoverUrl} alt={log.bookTitle} className={styles.diaryCover} style={{ width: 48, height: 72, objectFit: 'cover', borderRadius: 5 }} onError={e => e.target.style.display='none'} />
+                    <img src={log.bookCoverUrl} alt={log.bookTitle} className={styles.diaryCover}
+                      onError={e => { e.target.style.display = 'none' }} />
                   ) : (
-                    <div className={`${styles.diaryCover} bc${((log.bookExternalId?.charCodeAt(2) ?? 1) % 8) + 1}`} />
+                    <div className={`${styles.diaryCover} bc${colorIndex(log.bookExternalId)}`} />
                   )}
                   <div className={styles.diaryInfo}>
                     <div className={styles.diaryTitle}>{log.bookTitle || log.bookExternalId}</div>
-                    <div className={styles.diaryAuthor}>{log.bookAuthor}</div>
-                    <div className={styles.diaryRating}>
-                      {log.rating ? '★'.repeat(Math.round(log.rating)) : '—'}
-                    </div>
+                    {log.bookAuthor && <div className={styles.diaryAuthor}>{log.bookAuthor}</div>}
+                    {log.rating > 0 && <div className={styles.diaryRating}>{'★'.repeat(Math.round(log.rating))}</div>}
                     <div className={styles.diaryDate}>
-                      {log.finishedAt ? `Finished ${formatDate(log.finishedAt)}` :
-                       log.startedAt  ? `Started ${formatDate(log.startedAt)}`   :
-                       `Added ${formatDate(log.updatedAt)}`}
+                      {log.finishedAt ? `Finished ${formatDate(log.finishedAt)}`
+                        : log.startedAt ? `Started ${formatDate(log.startedAt)}`
+                          : `Added ${formatDate(log.updatedAt)}`}
                     </div>
                   </div>
                   <StatusPill status={log.status} />
@@ -281,67 +313,511 @@ export default function ProfilePage() {
               ))}
             </div>
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>
-              No books logged yet. <Link to="/log" style={{ color: 'var(--accent-green)' }}>Log your first book →</Link>
+            <p className={styles.emptyInline} style={{ padding: '20px 0' }}>
+              No books logged yet.{' '}
+              <Link to="/browse" style={{ color: 'var(--accent-green)' }}>Browse books →</Link>
             </p>
           )}
         </div>
       )}
 
-      {/* ── TAB: REVIEWS ── */}
+      {/* ── REVIEWS TAB ── */}
       {activeTab === 'Reviews' && (
         <div className={styles.tabContent}>
           <div className={styles.subHeader}>
             <h3 className={styles.subTitle}>Reviews</h3>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{reviewItems.length} total</span>
+            <span className={styles.subMeta}>{reviewItems.length} total</span>
           </div>
-          {reviewItems.length > 0 ? (
+          {reviewsLoading ? (
+            <div className={styles.reviewsGrid}>
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height="180px" borderRadius="10px" />)}
+            </div>
+          ) : reviewItems.length > 0 ? (
             <div className={styles.reviewsGrid}>
               {reviewItems.map(r => <ReviewCard key={r.id} review={normaliseReview(r)} />)}
             </div>
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>
-              No reviews yet.
-            </p>
+            <div className={styles.emptyTab}>
+              <div className={styles.emptyTitle}>No reviews yet</div>
+              <div className={styles.emptyDesc}>When you write a review on a book page, it will appear here.</div>
+            </div>
           )}
         </div>
       )}
 
-      {/* ── PLACEHOLDER TABS ── */}
-      {['Lists', 'Watchlist', 'Network'].includes(activeTab) && (
+      {/* ── LISTS TAB ── */}
+      {activeTab === 'Lists' && (
+        <ListsTab userId={user?.id} diaryItems={diaryItems} navigate={navigate} />
+      )}
+
+      {/* ── NETWORK TAB ── */}
+      {activeTab === 'Network' && (
         <div className={styles.emptyTab}>
-          <div className={styles.emptyTitle}>{activeTab}</div>
-          <div className={styles.emptyDesc}>
-            {activeTab === 'Lists'     && 'Create curated lists of books to share with others.'}
-            {activeTab === 'Watchlist' && "Books you've saved to read later."}
-            {activeTab === 'Network'   && 'People you follow and your followers.'}
+          <div className={styles.emptyTitle}>Network</div>
+          <div className={styles.emptyDesc}>People you follow and your followers.</div>
+        </div>
+      )}
+
+      {showEdit && (
+        <EditProfileModal profile={profile} username={username} onClose={() => setShowEdit(false)} />
+      )}
+      {showFavEdit && (
+        <EditFavouritesModal diaryItems={diaryItems} userId={user?.id} onClose={() => setShowFavEdit(false)} />
+      )}
+    </div>
+  )
+}
+
+/* ── Lists Tab ───────────────────────────────────────────────────────────── */
+function ListsTab({ userId, diaryItems, navigate }) {
+  const queryClient = useQueryClient()
+  const [showCreate, setShowCreate] = useState(false)
+  const [newListName, setNewListName] = useState('')
+  const [newListDesc, setNewListDesc] = useState('')
+  const [createError, setCreateError] = useState('')
+  const [activeList, setActiveList] = useState(null)  // { id, title, isDefault }
+  const [editingList, setEditingList] = useState(null) // { id, title, description }
+
+  const { data: lists = [], isLoading } = useQuery({
+    queryKey: ['lists', userId],
+    queryFn: async () => {
+      // Ensure defaults exist on first load
+      return await listsApi.ensureDefaults()
+    },
+    enabled: !!userId,
+    staleTime: 30 * 1000,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: ({ title, description }) => listsApi.create(title, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lists', userId] })
+      setShowCreate(false); setNewListName(''); setNewListDesc(''); setCreateError('')
+    },
+    onError: (err) => setCreateError(err?.response?.data?.message || 'Failed to create list.'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (listId) => listsApi.delete(listId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lists', userId] })
+      if (activeList) setActiveList(null)
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ listId, title, description }) => listsApi.update(listId, title, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lists', userId] })
+      setEditingList(null)
+    },
+  })
+
+  const addBookMutation = useMutation({
+    mutationFn: ({ listId, externalId }) => listsApi.addBook(listId, externalId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+  })
+
+  const removeBookMutation = useMutation({
+    mutationFn: ({ listId, externalId }) => listsApi.removeBook(listId, externalId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+  })
+
+  const currentList = activeList ? lists.find(l => l.id === activeList.id) : null
+
+  // Books in current list — cross-reference with diary items for cover/title data
+  const listBooks = currentList
+    ? currentList.externalBookIds.map(eid => {
+      const log = diaryItems.find(d => d.bookExternalId === eid)
+      return {
+        externalId: eid, title: log?.bookTitle || eid, author: log?.bookAuthor || '',
+        coverUrl: log?.bookCoverUrl || null
+      }
+    })
+    : []
+
+  return (
+    <div className={styles.tabContent}>
+      {/* Header */}
+      <div className={styles.subHeader}>
+        <h3 className={styles.subTitle}>
+          {activeList ? currentList?.title || activeList.title : 'My lists'}
+        </h3>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {activeList && (
+            <button className={styles.subLink} onClick={() => setActiveList(null)}>
+              ← All lists
+            </button>
+          )}
+          {!activeList && (
+            <button className={styles.btnPrimarySmall} onClick={() => setShowCreate(true)}>
+              + New list
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Create new list form */}
+      {showCreate && !activeList && (
+        <div className={styles.createListForm}>
+          <input
+            className={styles.listInput}
+            placeholder="List name…"
+            value={newListName}
+            onChange={e => setNewListName(e.target.value)}
+            maxLength={200}
+            autoFocus
+          />
+          <input
+            className={styles.listInput}
+            placeholder="Description (optional)"
+            value={newListDesc}
+            onChange={e => setNewListDesc(e.target.value)}
+          />
+          {createError && <p className={styles.listError}>{createError}</p>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className={styles.btnGhost} onClick={() => { setShowCreate(false); setCreateError('') }}>
+              Cancel
+            </button>
+            <button
+              className={styles.btnPrimarySmall}
+              disabled={!newListName.trim() || createMutation.isPending}
+              onClick={() => createMutation.mutate({ title: newListName.trim(), description: newListDesc.trim() })}
+            >
+              {createMutation.isPending ? 'Creating…' : 'Create'}
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Lists grid */}
+      {!activeList && (
+        isLoading ? (
+          <div className={styles.listsGrid}>
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height="100px" borderRadius="10px" />)}
+          </div>
+        ) : (
+          <div className={styles.listsGrid}>
+            {lists.map(list => (
+              <div key={list.id} className={styles.listCard} onClick={() => setActiveList(list)}>
+                <div className={styles.listCardHeader}>
+                  <div className={styles.listCardTitle}>{list.title}</div>
+                  {list.isDefault && <span className={styles.listDefaultBadge}>Default</span>}
+                </div>
+                {list.description && <p className={styles.listCardDesc}>{list.description}</p>}
+                <div className={styles.listCardMeta}>
+                  {list.bookCount} {list.bookCount === 1 ? 'book' : 'books'}
+                </div>
+                {/* Mini covers preview */}
+                {list.externalBookIds?.length > 0 && (
+                  <div className={styles.listMiniCovers}>
+                    {list.externalBookIds.slice(0, 5).map(eid => {
+                      const log = diaryItems.find(d => d.bookExternalId === eid)
+                      return log?.bookCoverUrl ? (
+                        <img key={eid} src={log.bookCoverUrl} alt={log.bookTitle}
+                          className={styles.listMiniCover}
+                          onError={e => { e.target.style.display = 'none' }} />
+                      ) : (
+                        <div key={eid} className={`${styles.listMiniCover} bc${colorIndex(eid)}`} />
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Single list view */}
+      {activeList && currentList && (
+        <div>
+          {/* List actions */}
+          {!currentList.isDefault && (
+            <div className={styles.listActions}>
+              {editingList ? (
+                <div className={styles.createListForm}>
+                  <input
+                    className={styles.listInput}
+                    value={editingList.title}
+                    onChange={e => setEditingList(p => ({ ...p, title: e.target.value }))}
+                    maxLength={200}
+                    placeholder="List name"
+                  />
+                  <input
+                    className={styles.listInput}
+                    value={editingList.description}
+                    onChange={e => setEditingList(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Description (optional)"
+                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className={styles.btnGhost} onClick={() => setEditingList(null)}>Cancel</button>
+                    <button
+                      className={styles.btnPrimarySmall}
+                      disabled={!editingList.title.trim() || updateMutation.isPending}
+                      onClick={() => updateMutation.mutate({
+                        listId: currentList.id,
+                        title: editingList.title.trim(),
+                        description: editingList.description.trim(),
+                      })}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className={styles.btnGhost}
+                    onClick={() => setEditingList({ id: currentList.id, title: currentList.title, description: currentList.description })}>
+                    Rename
+                  </button>
+                  <button className={`${styles.btnGhost} ${styles.btnDanger}`}
+                    onClick={() => { if (window.confirm(`Delete "${currentList.title}"?`)) deleteMutation.mutate(currentList.id) }}>
+                    Delete list
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add books from diary */}
+          {diaryItems.length > 0 && (
+            <div className={styles.addBooksSection}>
+              <div className={styles.addBooksLabel}>Add books from your diary</div>
+              <div className={styles.addBooksScroll}>
+                {diaryItems
+                  .filter(log => !currentList.externalBookIds.includes(log.bookExternalId))
+                  .slice(0, 20)
+                  .map(log => (
+                    <button
+                      key={log.id}
+                      className={styles.addBookChip}
+                      onClick={() => addBookMutation.mutate({ listId: currentList.id, externalId: log.bookExternalId })}
+                      title={log.bookTitle}
+                    >
+                      {log.bookCoverUrl ? (
+                        <img src={log.bookCoverUrl} alt={log.bookTitle}
+                          className={styles.addBookCover}
+                          onError={e => { e.target.style.display = 'none' }} />
+                      ) : (
+                        <div className={`${styles.addBookCover} bc${colorIndex(log.bookExternalId)}`} />
+                      )}
+                      <span className={styles.addBookTitle}>{log.bookTitle || log.bookExternalId}</span>
+                    </button>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+
+          {/* Books in list */}
+          {listBooks.length > 0 ? (
+            <div className={styles.listBookGrid}>
+              {listBooks.map(book => (
+                <div key={book.externalId} className={styles.listBookCard}>
+                  <div className={styles.listBookCoverWrap}
+                    onClick={() => navigate(`/book/${book.externalId}`)}>
+                    {book.coverUrl && !book._imgFailed ? (
+                      <img src={book.coverUrl} alt={book.title}
+                        className={styles.listBookCover}
+                        onError={e => { e.target.style.display = 'none' }} />
+                    ) : (
+                      <div className={`${styles.listBookCover} bc${colorIndex(book.externalId)}`} />
+                    )}
+                  </div>
+                  <div className={styles.listBookMeta}>
+                    <p className={styles.listBookTitle}>{book.title}</p>
+                    {book.author && <p className={styles.listBookAuthor}>{book.author}</p>}
+                  </div>
+                  <button
+                    className={styles.removeBookBtn}
+                    onClick={() => removeBookMutation.mutate({ listId: currentList.id, externalId: book.externalId })}
+                    title="Remove from list"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyTab}>
+              <div className={styles.emptyTitle}>Empty list</div>
+              <div className={styles.emptyDesc}>Add books from your diary using the picker above.</div>
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-function normaliseReview(r) {
-  return {
-    id:          r.id,
-    bookTitle:   r.book?.title,
-    bookAuthor:  r.book?.author,
-    coverColor:  'bc' + ((r.book?.id % 8) + 1),
-    username:    r.user?.username,
-    userInitial: r.user?.username?.[0]?.toUpperCase() ?? '?',
-    userColor:   'linear-gradient(135deg,#1c5e3a,#0d2e1a)',
-    rating:      r.rating ? Math.round(r.rating / 2) : 5,
-    text:        r.content,
-    likes:       r.likesCount ?? 0,
-    date:        r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric'
-    }) : '',
-    isPopular: (r.likesCount ?? 0) > 50,
-  }
+/* ── FavouriteBooks widget ───────────────────────────────────────────────── */
+function FavouriteBooks({ diaryItems, navigate, userId }) {
+  const favKey = userId ? `booklens-favourites-${userId}` : 'booklens-favourites'
+  const [favIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(favKey) || '[]') } catch { return [] }
+  })
+
+  const favItems = favIds.map(id => diaryItems.find(d => d.bookExternalId === id)).filter(Boolean)
+  const displayItems = favItems.length > 0 ? favItems.slice(0, 4) : diaryItems.slice(0, 4)
+  const empties = Math.max(0, 4 - displayItems.length)
+
+  return (
+    <div className={styles.favGrid}>
+      {displayItems.map(log => (
+        log.bookCoverUrl ? (
+          <img key={log.id} src={log.bookCoverUrl} alt={log.bookTitle}
+            className={styles.favCover}
+            onClick={() => navigate(`/book/${log.bookExternalId}`)}
+            onError={e => { e.target.style.display = 'none' }} />
+        ) : (
+          <div key={log.id}
+            className={`${styles.favCover} bc${colorIndex(log.bookExternalId)}`}
+            title={log.bookTitle}
+            onClick={() => navigate(`/book/${log.bookExternalId}`)} />
+        )
+      ))}
+      {Array.from({ length: empties }).map((_, i) => (
+        <div key={`e-${i}`} className={styles.favCoverEmpty} />
+      ))}
+    </div>
+  )
 }
 
-function formatDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+/* ── Edit Favourites Modal ───────────────────────────────────────────────── */
+function EditFavouritesModal({ diaryItems, userId, onClose }) {
+  const favKey = userId ? `booklens-favourites-${userId}` : 'booklens-favourites'
+  const [selected, setSelected] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(favKey) || '[]')) } catch { return new Set() }
+  })
+
+  function toggle(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else if (next.size < 4) next.add(id)
+      return next
+    })
+  }
+
+  function save() {
+    localStorage.setItem(favKey, JSON.stringify([...selected]))
+    onClose()
+  }
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>Choose favourite books</h2>
+          <button className={styles.modalClose} onClick={onClose}>×</button>
+        </div>
+        <p className={styles.modalSub}>Select up to 4 books to pin to your profile.</p>
+        <div className={styles.favSelectGrid}>
+          {diaryItems.map(log => {
+            const id = log.bookExternalId
+            const isSel = selected.has(id)
+            const isDisabled = !isSel && selected.size >= 4
+            return (
+              <button key={log.id}
+                className={`${styles.favSelectItem} ${isSel ? styles.favSelectItemActive : ''} ${isDisabled ? styles.favSelectItemDisabled : ''}`}
+                onClick={() => !isDisabled && toggle(id)} title={log.bookTitle}
+              >
+                {log.bookCoverUrl ? (
+                  <img src={log.bookCoverUrl} alt={log.bookTitle} className={styles.favSelectCover}
+                    onError={e => { e.target.style.display = 'none' }} />
+                ) : (
+                  <div className={`${styles.favSelectCover} bc${colorIndex(id)}`} />
+                )}
+                {isSel && <div className={styles.favCheckmark}>✓</div>}
+              </button>
+            )
+          })}
+        </div>
+        <div className={styles.modalActions}>
+          <span className={styles.modalCount}>{selected.size} / 4 selected</span>
+          <button className={styles.btnGhost} onClick={onClose}>Cancel</button>
+          <button className={styles.btnPrimary} onClick={save}>Save favourites</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Edit Profile Modal ──────────────────────────────────────────────────── */
+function EditProfileModal({ profile, username, onClose }) {
+  const updateProfile = useUpdateProfile()
+  const updateUser = useAuthStore(s => s.updateUser)
+  const queryClient = useQueryClient()
+
+  const [form, setForm] = useState({
+    displayName: profile?.displayName || '',
+    bio: profile?.bio || '',
+    location: profile?.location || '',
+    readingGoal: profile?.readingGoal || 36,
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  function set(key, val) { setForm(prev => ({ ...prev, [key]: val })) }
+
+  async function handleSave() {
+    setSaving(true); setError('')
+    try {
+      await updateProfile.mutateAsync({
+        displayName: form.displayName.trim() || undefined,
+        bio: form.bio.trim() || undefined,
+        location: form.location.trim() || undefined,
+        readingGoal: Number(form.readingGoal) || 36,
+      })
+      updateUser({ displayName: form.displayName.trim() || undefined })
+      queryClient.invalidateQueries({ queryKey: keys.users.profile(username) })
+      setSuccess(true)
+      setTimeout(onClose, 700)
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to save. Please try again.')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>Edit profile</h2>
+          <button className={styles.modalClose} onClick={onClose}>×</button>
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.formLabel}>Display name</label>
+          <input className={styles.formInput} value={form.displayName}
+            onChange={e => set('displayName', e.target.value)} placeholder="Your display name" maxLength={100} />
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.formLabel}>Bio</label>
+          <textarea className={styles.formTextarea} value={form.bio}
+            onChange={e => set('bio', e.target.value)}
+            placeholder="Tell other readers about yourself…" rows={3} maxLength={500} />
+          <span className={styles.charCount}>{form.bio.length} / 500</span>
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.formLabel}>Location</label>
+          <input className={styles.formInput} value={form.location}
+            onChange={e => set('location', e.target.value)} placeholder="City, Country" maxLength={100} />
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.formLabel}>Reading goal (books per year)</label>
+          <input className={styles.formInput} type="number" min={1} max={500}
+            value={form.readingGoal} onChange={e => set('readingGoal', e.target.value)} />
+        </div>
+        {error && <p className={styles.formError}>{error}</p>}
+        {success && <p className={styles.formSuccess}>Saved!</p>}
+        <div className={styles.modalActions}>
+          <button className={styles.btnGhost} onClick={onClose}>Cancel</button>
+          <button className={styles.btnPrimary} onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
