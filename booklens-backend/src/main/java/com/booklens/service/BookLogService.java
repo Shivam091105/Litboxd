@@ -3,10 +3,12 @@ package com.booklens.service;
 import com.booklens.books.BookApiService;
 import com.booklens.dto.book.BookDto;
 import com.booklens.dto.log.BookLogDto;
+import com.booklens.entity.BookList;
 import com.booklens.entity.BookLog;
 import com.booklens.entity.BookLog.ReadingStatus;
 import com.booklens.entity.User;
 import com.booklens.exception.BookLensException;
+import com.booklens.repository.BookListRepository;
 import com.booklens.repository.BookLogRepository;
 import com.booklens.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +28,10 @@ import java.util.Map;
 @Slf4j
 public class BookLogService {
 
-    private final BookLogRepository bookLogRepository;
-    private final UserRepository    userRepository;
-    private final BookApiService    bookApiService;
+    private final BookLogRepository  bookLogRepository;
+    private final UserRepository     userRepository;
+    private final BookApiService     bookApiService;
+    private final BookListRepository bookListRepository;
 
     // ── Log / update a book entry ─────────────────────────────────────────
 
@@ -51,6 +54,9 @@ public class BookLogService {
 
         applyPayload(log, payload);
         BookLog saved = bookLogRepository.save(log);
+
+        // Auto-sync this book into the matching default list
+        syncDefaultLists(userId, externalBookId, saved.getStatus());
 
         // Fetch book metadata to return rich response
         BookDto bookDto = safeGetBook(externalBookId);
@@ -85,11 +91,27 @@ public class BookLogService {
     @Transactional
     @CacheEvict(value = "recommendations", key = "#userId")
     public void deleteLog(Long userId, Long logId) {
-        BookLog log = bookLogRepository.findById(logId)
+        BookLog bookLog = bookLogRepository.findById(logId)
                 .orElseThrow(() -> new BookLensException("Log not found", HttpStatus.NOT_FOUND));
-        if (!log.getUser().getId().equals(userId))
+        if (!bookLog.getUser().getId().equals(userId))
             throw new BookLensException("Not authorized", HttpStatus.FORBIDDEN);
-        bookLogRepository.delete(log);
+
+        String externalBookId = bookLog.getExternalBookId();
+        User user = bookLog.getUser();
+        bookLogRepository.delete(bookLog);
+
+        // Remove from all default lists when log is deleted
+        try {
+            for (String listTitle : DEFAULT_LIST_TITLES) {
+                bookListRepository.findByUserIdAndTitle(userId, listTitle).ifPresent(list -> {
+                    if (list.getExternalBookIds().remove(externalBookId)) {
+                        bookListRepository.save(list);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            log.warn("Could not remove book from default lists: {}", e.getMessage());
+        }
     }
 
     // ── Reading challenge ─────────────────────────────────────────────────
@@ -171,5 +193,57 @@ public class BookLogService {
                 .createdAt(log.getCreatedAt())
                 .updatedAt(log.getUpdatedAt())
                 .build();
+    }
+
+    // ── Auto-sync default lists ───────────────────────────────────────────────
+
+    private static final java.util.Map<ReadingStatus, String> STATUS_TO_LIST = java.util.Map.of(
+            ReadingStatus.READ,    "Read",
+            ReadingStatus.READING, "Currently Reading",
+            ReadingStatus.WANT,    "Want to Read"
+    );
+
+    private static final java.util.List<String> DEFAULT_LIST_TITLES =
+            java.util.List.of("Read", "Currently Reading", "Want to Read");
+
+    /**
+     * Keeps the three default lists in sync with the user's log status.
+     * - Adds the book to the list matching the new status.
+     * - Removes it from the other two default lists.
+     */
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void syncDefaultLists(Long userId, String externalBookId, ReadingStatus newStatus) {
+        try {
+            String targetTitle = STATUS_TO_LIST.get(newStatus);
+            User listUser = userRepository.findById(userId).orElse(null);
+            if (listUser == null) return;
+
+            for (String listTitle : DEFAULT_LIST_TITLES) {
+                java.util.Optional<BookList> optList =
+                        bookListRepository.findByUserIdAndTitle(userId, listTitle);
+
+                BookList list;
+                if (optList.isPresent()) {
+                    list = optList.get();
+                } else {
+                    // Create default list on the fly if it doesn't exist yet
+                    list = bookListRepository.save(BookList.builder()
+                            .user(listUser).title(listTitle).description("").isPublic(true).build());
+                }
+
+                boolean shouldBeInList = listTitle.equals(targetTitle);
+                boolean isInList = list.getExternalBookIds().contains(externalBookId);
+
+                if (shouldBeInList && !isInList) {
+                    list.getExternalBookIds().add(externalBookId);
+                    bookListRepository.save(list);
+                } else if (!shouldBeInList && isInList) {
+                    list.getExternalBookIds().remove(externalBookId);
+                    bookListRepository.save(list);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not sync default lists for book {}: {}", externalBookId, e.getMessage());
+        }
     }
 }

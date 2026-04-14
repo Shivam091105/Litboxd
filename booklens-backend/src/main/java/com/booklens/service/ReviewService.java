@@ -27,6 +27,17 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository   userRepository;
     private final BookApiService   bookApiService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @jakarta.annotation.PostConstruct
+    public void fixSchema() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE reviews ALTER COLUMN book_id DROP NOT NULL");
+            log.info("Schema fix: Set book_id to DROP NOT NULL on reviews table.");
+        } catch (Exception e) {
+            log.info("Schema fix: book_id column not found or already fixed.");
+        }
+    }
 
     @Transactional
     @CacheEvict(value = "recommendations", key = "#userId")
@@ -34,23 +45,32 @@ public class ReviewService {
         if (reviewRepository.existsByUserIdAndExternalBookId(userId, externalBookId))
             throw new BookLensException("You've already reviewed this book.", HttpStatus.CONFLICT);
 
+        if (content == null || content.isBlank())
+            throw new BookLensException("Review content cannot be empty.", HttpStatus.BAD_REQUEST);
+
         User user = getUser(userId);
         Review review = reviewRepository.save(Review.builder()
                 .user(user)
                 .externalBookId(externalBookId)
-                .content(content)
+                .content(content.trim())
                 .hasSpoiler(hasSpoiler)
                 .build());
 
-        return toDto(review, safeGetBook(externalBookId), userId);
+        // Do not fetch book metadata here — keeps the transaction clean.
+        // The caller (ReviewController) returns the ReviewDto; the frontend
+        // refreshes the full review list to get enriched book data.
+        return toDtoNoBook(review, userId);
     }
 
     @Transactional
     public ReviewDto updateReview(Long userId, Long reviewId, String content, boolean hasSpoiler) {
+        if (content == null || content.isBlank())
+            throw new BookLensException("Review content cannot be empty.", HttpStatus.BAD_REQUEST);
+
         Review review = getAndCheckOwner(userId, reviewId);
-        review.setContent(content);
+        review.setContent(content.trim());
         review.setHasSpoiler(hasSpoiler);
-        return toDto(reviewRepository.save(review), safeGetBook(review.getExternalBookId()), userId);
+        return toDtoNoBook(reviewRepository.save(review), userId);
     }
 
     @Transactional
@@ -116,6 +136,26 @@ public class ReviewService {
             log.debug("Could not fetch book {}: {}", externalBookId, e.getMessage());
             return BookDto.builder().externalId(externalBookId).title("").author("").build();
         }
+    }
+
+    /** Lightweight DTO without book metadata — used for create/update responses. */
+    private ReviewDto toDtoNoBook(Review r, Long currentUserId) {
+        boolean liked = currentUserId != null &&
+                r.getLikedBy().stream().anyMatch(u -> u.getId().equals(currentUserId));
+        return ReviewDto.builder()
+                .id(r.getId())
+                .content(r.getContent())
+                .hasSpoiler(r.isHasSpoiler())
+                .likesCount(r.getLikesCount())
+                .likedByCurrentUser(liked)
+                .bookExternalId(r.getExternalBookId())
+                .userId(r.getUser().getId())
+                .username(r.getUser().getUsername())
+                .displayName(r.getUser().getDisplayName())
+                .avatarUrl(r.getUser().getAvatarUrl())
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .build();
     }
 
     private ReviewDto toDto(Review r, BookDto book, Long currentUserId) {

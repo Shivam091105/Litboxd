@@ -11,4 +11,4 @@ public class BookLensApplication {
     public static void main(String[] args) {
         SpringApplication.run(BookLensApplication.class, args);
     }
-}   
+}

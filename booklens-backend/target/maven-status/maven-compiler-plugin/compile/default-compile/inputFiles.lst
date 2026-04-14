@@ -5,6 +5,8 @@ C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\c
 C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\repository\UserRepository.java
 C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\entity\BookLog.java
 C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\dto\book\BookSearchResponse.java
+C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\repository\BookListRepository.java
+C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\controller\BookListController.java
 C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\service\BookLogService.java
 C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\entity\Review.java
 C:\Users\ADMIN\OneDrive\Desktop\Sem-VI\Litboxd2\booklens-backend\src\main\java\com\booklens\exception\GlobalExceptionHandler.java

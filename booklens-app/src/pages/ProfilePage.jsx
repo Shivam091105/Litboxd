@@ -1,34 +1,31 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReviewCard from '../components/book/ReviewCard'
 import { StatusPill } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
 import { useProfile, useDiary, useChallenge, useUpdateProfile } from '../hooks/useUser'
 import { useUserReviews } from '../hooks/useReviews'
+import { listsApi } from '../api/lists'
 import useAuthStore from '../store/authStore'
 import { keys } from '../api/queryKeys'
 import styles from './ProfilePage.module.css'
 
 const TABS = ['Overview', 'Diary', 'Reviews', 'Lists', 'Network']
+const DEFAULT_LISTS = ['Read', 'Currently Reading', 'Want to Read']
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
 function colorIndex(str) {
   if (!str) return 1
   let h = 0
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
   return (h % 8) + 1
 }
-
 function formatDate(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
-
-// Normalise ReviewDto from backend → ReviewCard props
 function normaliseReview(r) {
-  // ReviewDto fields: bookTitle, bookAuthor, bookCoverUrl, bookExternalId,
-  //                   username, content, likesCount, rating, createdAt
   const username = r.username ?? r.user?.username ?? 'Anonymous'
   return {
     id: r.id,
@@ -52,12 +49,11 @@ function normaliseReview(r) {
   }
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+/* ── Main component ──────────────────────────────────────────────────────── */
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('Overview')
   const [showEdit, setShowEdit] = useState(false)
   const [showFavEdit, setShowFavEdit] = useState(false)
-
   const { user, isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
   const username = user?.username
@@ -76,32 +72,23 @@ export default function ProfilePage() {
         <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
           Sign in to view and manage your profile.
         </p>
-        <button
-          onClick={() => navigate('/login')}
-          style={{
-            background: 'var(--accent-green)', color: '#0d0f0e', border: 'none',
-            borderRadius: 20, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer'
-          }}
-        >
-          Sign in
-        </button>
+        <button onClick={() => navigate('/login')} style={{
+          background: 'var(--accent-green)', color: '#0d0f0e', border: 'none',
+          borderRadius: 20, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer'
+        }}>Sign in</button>
       </div>
     )
   }
 
   const diaryItems = Array.isArray(diaryData) ? diaryData : diaryData?.content ?? []
   const reviewItems = Array.isArray(reviewsData) ? reviewsData : reviewsData?.content ?? []
-
   const initials = profile?.displayName
     ? profile.displayName.slice(0, 2).toUpperCase()
     : username?.slice(0, 2).toUpperCase() ?? 'BL'
 
   return (
     <div>
-      {/* Banner */}
       <div className={styles.banner} />
-
-      {/* Profile header */}
       <div className={styles.headerWrap}>
         <div className={styles.headerInner}>
           <div className={styles.avatarXl}>{initials}</div>
@@ -116,9 +103,7 @@ export default function ProfilePage() {
                 <div className={styles.name}>{profile?.displayName || username}</div>
                 <div className={styles.handle}>@{profile?.username || username}</div>
                 {profile?.bio && <div className={styles.bio}>{profile.bio}</div>}
-                {profile?.location && (
-                  <div className={styles.location}>{profile.location}</div>
-                )}
+                {profile?.location && <div className={styles.location}>{profile.location}</div>}
               </>
             )}
           </div>
@@ -131,12 +116,11 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Sticky tab bar */}
+      {/* Tab bar */}
       <div className={styles.tabBar}>
         <div className={styles.tabBarInner}>
           {TABS.map(t => (
-            <button
-              key={t} type="button"
+            <button key={t} type="button"
               className={`${styles.tab} ${activeTab === t ? styles.tabActive : ''}`}
               onClick={() => setActiveTab(t)}
             >
@@ -149,12 +133,11 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── OVERVIEW TAB ── */}
+      {/* ── OVERVIEW ── */}
       {activeTab === 'Overview' && (
         <div className={styles.body}>
           <div className={styles.main}>
-
-            {/* Stats row */}
+            {/* Stats */}
             <div className={styles.statsGrid}>
               {profileLoading
                 ? Array.from({ length: 5 }).map((_, i) => (
@@ -164,19 +147,14 @@ export default function ProfilePage() {
                   </div>
                 ))
                 : [
-                  ['Books', profile?.booksRead ?? 0],
-                  ['Reviews', reviewItems.length],
-                  ['Lists', profile?.listsCount ?? 0],
-                  ['Followers', profile?.followersCount ?? 0],
-                  ['Following', profile?.followingCount ?? 0],
-                ].map(([label, val]) => (
-                  <div
-                    key={label} className={styles.statBox}
-                    onClick={() => {
-                      if (label === 'Reviews') setActiveTab('Reviews')
-                      if (label === 'Books') setActiveTab('Diary')
-                    }}
-                  >
+                  ['Books', profile?.booksRead ?? 0, () => setActiveTab('Diary')],
+                  ['Reviews', reviewItems.length, () => setActiveTab('Reviews')],
+                  ['Lists', profile?.listsCount ?? 0, () => setActiveTab('Lists')],
+                  ['Followers', profile?.followersCount ?? 0, null],
+                  ['Following', profile?.followingCount ?? 0, null],
+                ].map(([label, val, onClick]) => (
+                  <div key={label} className={styles.statBox} onClick={onClick || undefined}
+                    style={onClick ? { cursor: 'pointer' } : {}}>
                     <div className={styles.sbNum}>{val}</div>
                     <div className={styles.sbLabel}>{label}</div>
                   </div>
@@ -191,26 +169,18 @@ export default function ProfilePage() {
             </div>
             <div className={styles.recentCovers}>
               {diaryLoading
-                ? Array.from({ length: 7 }).map((_, i) => (
-                  <Skeleton key={i} width="60px" height="90px" borderRadius="6px" />
-                ))
+                ? Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} width="60px" height="90px" borderRadius="6px" />)
                 : diaryItems.slice(0, 7).map(log => (
                   log.bookCoverUrl ? (
-                    <img
-                      key={log.id}
-                      src={log.bookCoverUrl}
-                      alt={log.bookTitle}
+                    <img key={log.id} src={log.bookCoverUrl} alt={log.bookTitle}
                       className={styles.rCover}
                       onClick={() => navigate(`/book/${log.bookExternalId}`)}
-                      onError={e => { e.target.style.display = 'none' }}
-                    />
+                      onError={e => { e.target.style.display = 'none' }} />
                   ) : (
-                    <div
-                      key={log.id}
+                    <div key={log.id}
                       className={`${styles.rCover} bc${colorIndex(log.bookExternalId)}`}
                       title={log.bookTitle}
-                      onClick={() => navigate(`/book/${log.bookExternalId}`)}
-                    />
+                      onClick={() => navigate(`/book/${log.bookExternalId}`)} />
                   )
                 ))
               }
@@ -232,10 +202,7 @@ export default function ProfilePage() {
                   <span className={styles.challengeYear}>{new Date().getFullYear()} challenge</span>
                 </div>
                 <div className={styles.progressBar}>
-                  <div
-                    className={styles.progressFill}
-                    style={{ width: `${Math.min(100, challenge.percent)}%` }}
-                  />
+                  <div className={styles.progressFill} style={{ width: `${Math.min(100, challenge.percent)}%` }} />
                 </div>
                 <div className={styles.challengeLabel}>{challenge.percent}% complete</div>
               </div>
@@ -244,9 +211,7 @@ export default function ProfilePage() {
             {/* Recent reviews */}
             <div className={styles.subHeader} style={{ marginTop: 32 }}>
               <h3 className={styles.subTitle}>Recent reviews</h3>
-              <button className={styles.subLink} onClick={() => setActiveTab('Reviews')}>
-                All reviews
-              </button>
+              <button className={styles.subLink} onClick={() => setActiveTab('Reviews')}>All reviews</button>
             </div>
             {reviewsLoading ? (
               <Skeleton height="120px" borderRadius="10px" />
@@ -257,34 +222,19 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className={styles.emptyInline}>
-                No reviews yet. Log a book and share your thoughts.
-              </p>
+              <p className={styles.emptyInline}>No reviews yet. Log a book and share your thoughts.</p>
             )}
           </div>
 
           {/* Sidebar */}
           <div className={styles.sidebar}>
-
-            {/* Favourite books — user-editable */}
             <div className={styles.widget}>
               <div className={styles.widgetHeader}>
                 <div className={styles.widgetTitle}>Favourite books</div>
-                <button
-                  className={styles.widgetEdit}
-                  onClick={() => setShowFavEdit(true)}
-                  title="Edit favourites"
-                >
-                  Edit
-                </button>
+                <button className={styles.widgetEdit} onClick={() => setShowFavEdit(true)}>Edit</button>
               </div>
-              <FavouriteBooks
-                diaryItems={diaryItems}
-                navigate={navigate}
-              />
+              <FavouriteBooks diaryItems={diaryItems} navigate={navigate} userId={user?.id} />
             </div>
-
-            {/* Account info */}
             <div className={styles.widget}>
               <div className={styles.widgetTitle}>Account</div>
               <div className={styles.accountInfo}>
@@ -340,29 +290,18 @@ export default function ProfilePage() {
           ) : diaryItems.length > 0 ? (
             <div className={styles.diaryList}>
               {diaryItems.map(log => (
-                <div
-                  key={log.id}
-                  className={styles.diaryItem}
-                  onClick={() => navigate(`/book/${log.bookExternalId}`)}
-                >
+                <div key={log.id} className={styles.diaryItem}
+                  onClick={() => navigate(`/book/${log.bookExternalId}`)}>
                   {log.bookCoverUrl ? (
-                    <img
-                      src={log.bookCoverUrl}
-                      alt={log.bookTitle}
-                      className={styles.diaryCover}
-                      onError={e => { e.target.style.display = 'none' }}
-                    />
+                    <img src={log.bookCoverUrl} alt={log.bookTitle} className={styles.diaryCover}
+                      onError={e => { e.target.style.display = 'none' }} />
                   ) : (
                     <div className={`${styles.diaryCover} bc${colorIndex(log.bookExternalId)}`} />
                   )}
                   <div className={styles.diaryInfo}>
                     <div className={styles.diaryTitle}>{log.bookTitle || log.bookExternalId}</div>
                     {log.bookAuthor && <div className={styles.diaryAuthor}>{log.bookAuthor}</div>}
-                    {log.rating > 0 && (
-                      <div className={styles.diaryRating}>
-                        {'★'.repeat(Math.round(log.rating))}
-                      </div>
-                    )}
+                    {log.rating > 0 && <div className={styles.diaryRating}>{'★'.repeat(Math.round(log.rating))}</div>}
                     <div className={styles.diaryDate}>
                       {log.finishedAt ? `Finished ${formatDate(log.finishedAt)}`
                         : log.startedAt ? `Started ${formatDate(log.startedAt)}`
@@ -391,9 +330,7 @@ export default function ProfilePage() {
           </div>
           {reviewsLoading ? (
             <div className={styles.reviewsGrid}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} height="180px" borderRadius="10px" />
-              ))}
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height="180px" borderRadius="10px" />)}
             </div>
           ) : reviewItems.length > 0 ? (
             <div className={styles.reviewsGrid}>
@@ -402,114 +339,363 @@ export default function ProfilePage() {
           ) : (
             <div className={styles.emptyTab}>
               <div className={styles.emptyTitle}>No reviews yet</div>
-              <div className={styles.emptyDesc}>
-                When you log a book and write a review, it will appear here.
-              </div>
+              <div className={styles.emptyDesc}>When you write a review on a book page, it will appear here.</div>
             </div>
           )}
         </div>
       )}
 
-      {/* ── PLACEHOLDER TABS ── */}
-      {['Lists', 'Network'].includes(activeTab) && (
+      {/* ── LISTS TAB ── */}
+      {activeTab === 'Lists' && (
+        <ListsTab userId={user?.id} diaryItems={diaryItems} navigate={navigate} />
+      )}
+
+      {/* ── NETWORK TAB ── */}
+      {activeTab === 'Network' && (
         <div className={styles.emptyTab}>
-          <div className={styles.emptyTitle}>{activeTab}</div>
-          <div className={styles.emptyDesc}>
-            {activeTab === 'Lists' && 'Create curated lists of books to share with others.'}
-            {activeTab === 'Network' && 'People you follow and your followers.'}
-          </div>
+          <div className={styles.emptyTitle}>Network</div>
+          <div className={styles.emptyDesc}>People you follow and your followers.</div>
         </div>
       )}
 
-      {/* ── EDIT PROFILE MODAL ── */}
       {showEdit && (
-        <EditProfileModal
-          profile={profile}
-          username={username}
-          onClose={() => setShowEdit(false)}
-        />
+        <EditProfileModal profile={profile} username={username} onClose={() => setShowEdit(false)} />
       )}
-
-      {/* ── EDIT FAVOURITES MODAL ── */}
       {showFavEdit && (
-        <EditFavouritesModal
-          diaryItems={diaryItems}
-          onClose={() => setShowFavEdit(false)}
-        />
+        <EditFavouritesModal diaryItems={diaryItems} userId={user?.id} onClose={() => setShowFavEdit(false)} />
       )}
     </div>
   )
 }
 
-// ── Favourite Books (sidebar widget) ─────────────────────────────────────────
-function FavouriteBooks({ diaryItems, navigate }) {
-  // Load persisted favourites from localStorage — keyed per user
-  const { user } = useAuthStore()
-  const favKey = user?.id ? `booklens-favourites-${user.id}` : 'booklens-favourites'
-  const [favIds, setFavIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(favKey) || '[]')
-    } catch { return [] }
+/* ── Lists Tab ───────────────────────────────────────────────────────────── */
+function ListsTab({ userId, diaryItems, navigate }) {
+  const queryClient = useQueryClient()
+  const [showCreate, setShowCreate] = useState(false)
+  const [newListName, setNewListName] = useState('')
+  const [newListDesc, setNewListDesc] = useState('')
+  const [createError, setCreateError] = useState('')
+  const [activeList, setActiveList] = useState(null)  // { id, title, isDefault }
+  const [editingList, setEditingList] = useState(null) // { id, title, description }
+
+  const { data: lists = [], isLoading } = useQuery({
+    queryKey: ['lists', userId],
+    queryFn: async () => {
+      // Ensure defaults exist on first load
+      return await listsApi.ensureDefaults()
+    },
+    enabled: !!userId,
+    staleTime: 30 * 1000,
   })
 
-  // Build display items: favourited books first, then fill with diary items
-  const favItems = favIds
-    .map(id => diaryItems.find(d => d.bookExternalId === id || d.id === id))
-    .filter(Boolean)
+  const createMutation = useMutation({
+    mutationFn: ({ title, description }) => listsApi.create(title, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lists', userId] })
+      setShowCreate(false); setNewListName(''); setNewListDesc(''); setCreateError('')
+    },
+    onError: (err) => setCreateError(err?.response?.data?.message || 'Failed to create list.'),
+  })
 
-  const displayItems = favItems.length > 0
-    ? favItems.slice(0, 4)
-    : diaryItems.slice(0, 4)
+  const deleteMutation = useMutation({
+    mutationFn: (listId) => listsApi.delete(listId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lists', userId] })
+      if (activeList) setActiveList(null)
+    },
+  })
 
-  const slots = 4
-  const empties = Math.max(0, slots - displayItems.length)
+  const updateMutation = useMutation({
+    mutationFn: ({ listId, title, description }) => listsApi.update(listId, title, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lists', userId] })
+      setEditingList(null)
+    },
+  })
+
+  const addBookMutation = useMutation({
+    mutationFn: ({ listId, externalId }) => listsApi.addBook(listId, externalId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+  })
+
+  const removeBookMutation = useMutation({
+    mutationFn: ({ listId, externalId }) => listsApi.removeBook(listId, externalId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+  })
+
+  const currentList = activeList ? lists.find(l => l.id === activeList.id) : null
+
+  // Books in current list — cross-reference with diary items for cover/title data
+  const listBooks = currentList
+    ? currentList.externalBookIds.map(eid => {
+      const log = diaryItems.find(d => d.bookExternalId === eid)
+      return {
+        externalId: eid, title: log?.bookTitle || eid, author: log?.bookAuthor || '',
+        coverUrl: log?.bookCoverUrl || null
+      }
+    })
+    : []
+
+  return (
+    <div className={styles.tabContent}>
+      {/* Header */}
+      <div className={styles.subHeader}>
+        <h3 className={styles.subTitle}>
+          {activeList ? currentList?.title || activeList.title : 'My lists'}
+        </h3>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {activeList && (
+            <button className={styles.subLink} onClick={() => setActiveList(null)}>
+              ← All lists
+            </button>
+          )}
+          {!activeList && (
+            <button className={styles.btnPrimarySmall} onClick={() => setShowCreate(true)}>
+              + New list
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Create new list form */}
+      {showCreate && !activeList && (
+        <div className={styles.createListForm}>
+          <input
+            className={styles.listInput}
+            placeholder="List name…"
+            value={newListName}
+            onChange={e => setNewListName(e.target.value)}
+            maxLength={200}
+            autoFocus
+          />
+          <input
+            className={styles.listInput}
+            placeholder="Description (optional)"
+            value={newListDesc}
+            onChange={e => setNewListDesc(e.target.value)}
+          />
+          {createError && <p className={styles.listError}>{createError}</p>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className={styles.btnGhost} onClick={() => { setShowCreate(false); setCreateError('') }}>
+              Cancel
+            </button>
+            <button
+              className={styles.btnPrimarySmall}
+              disabled={!newListName.trim() || createMutation.isPending}
+              onClick={() => createMutation.mutate({ title: newListName.trim(), description: newListDesc.trim() })}
+            >
+              {createMutation.isPending ? 'Creating…' : 'Create'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lists grid */}
+      {!activeList && (
+        isLoading ? (
+          <div className={styles.listsGrid}>
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height="100px" borderRadius="10px" />)}
+          </div>
+        ) : (
+          <div className={styles.listsGrid}>
+            {lists.map(list => (
+              <div key={list.id} className={styles.listCard} onClick={() => setActiveList(list)}>
+                <div className={styles.listCardHeader}>
+                  <div className={styles.listCardTitle}>{list.title}</div>
+                  {list.isDefault && <span className={styles.listDefaultBadge}>Default</span>}
+                </div>
+                {list.description && <p className={styles.listCardDesc}>{list.description}</p>}
+                <div className={styles.listCardMeta}>
+                  {list.bookCount} {list.bookCount === 1 ? 'book' : 'books'}
+                </div>
+                {/* Mini covers preview */}
+                {list.externalBookIds?.length > 0 && (
+                  <div className={styles.listMiniCovers}>
+                    {list.externalBookIds.slice(0, 5).map(eid => {
+                      const log = diaryItems.find(d => d.bookExternalId === eid)
+                      return log?.bookCoverUrl ? (
+                        <img key={eid} src={log.bookCoverUrl} alt={log.bookTitle}
+                          className={styles.listMiniCover}
+                          onError={e => { e.target.style.display = 'none' }} />
+                      ) : (
+                        <div key={eid} className={`${styles.listMiniCover} bc${colorIndex(eid)}`} />
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Single list view */}
+      {activeList && currentList && (
+        <div>
+          {/* List actions */}
+          {!currentList.isDefault && (
+            <div className={styles.listActions}>
+              {editingList ? (
+                <div className={styles.createListForm}>
+                  <input
+                    className={styles.listInput}
+                    value={editingList.title}
+                    onChange={e => setEditingList(p => ({ ...p, title: e.target.value }))}
+                    maxLength={200}
+                    placeholder="List name"
+                  />
+                  <input
+                    className={styles.listInput}
+                    value={editingList.description}
+                    onChange={e => setEditingList(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Description (optional)"
+                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className={styles.btnGhost} onClick={() => setEditingList(null)}>Cancel</button>
+                    <button
+                      className={styles.btnPrimarySmall}
+                      disabled={!editingList.title.trim() || updateMutation.isPending}
+                      onClick={() => updateMutation.mutate({
+                        listId: currentList.id,
+                        title: editingList.title.trim(),
+                        description: editingList.description.trim(),
+                      })}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className={styles.btnGhost}
+                    onClick={() => setEditingList({ id: currentList.id, title: currentList.title, description: currentList.description })}>
+                    Rename
+                  </button>
+                  <button className={`${styles.btnGhost} ${styles.btnDanger}`}
+                    onClick={() => { if (window.confirm(`Delete "${currentList.title}"?`)) deleteMutation.mutate(currentList.id) }}>
+                    Delete list
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add books from diary */}
+          {diaryItems.length > 0 && (
+            <div className={styles.addBooksSection}>
+              <div className={styles.addBooksLabel}>Add books from your diary</div>
+              <div className={styles.addBooksScroll}>
+                {diaryItems
+                  .filter(log => !currentList.externalBookIds.includes(log.bookExternalId))
+                  .slice(0, 20)
+                  .map(log => (
+                    <button
+                      key={log.id}
+                      className={styles.addBookChip}
+                      onClick={() => addBookMutation.mutate({ listId: currentList.id, externalId: log.bookExternalId })}
+                      title={log.bookTitle}
+                    >
+                      {log.bookCoverUrl ? (
+                        <img src={log.bookCoverUrl} alt={log.bookTitle}
+                          className={styles.addBookCover}
+                          onError={e => { e.target.style.display = 'none' }} />
+                      ) : (
+                        <div className={`${styles.addBookCover} bc${colorIndex(log.bookExternalId)}`} />
+                      )}
+                      <span className={styles.addBookTitle}>{log.bookTitle || log.bookExternalId}</span>
+                    </button>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+
+          {/* Books in list */}
+          {listBooks.length > 0 ? (
+            <div className={styles.listBookGrid}>
+              {listBooks.map(book => (
+                <div key={book.externalId} className={styles.listBookCard}>
+                  <div className={styles.listBookCoverWrap}
+                    onClick={() => navigate(`/book/${book.externalId}`)}>
+                    {book.coverUrl && !book._imgFailed ? (
+                      <img src={book.coverUrl} alt={book.title}
+                        className={styles.listBookCover}
+                        onError={e => { e.target.style.display = 'none' }} />
+                    ) : (
+                      <div className={`${styles.listBookCover} bc${colorIndex(book.externalId)}`} />
+                    )}
+                  </div>
+                  <div className={styles.listBookMeta}>
+                    <p className={styles.listBookTitle}>{book.title}</p>
+                    {book.author && <p className={styles.listBookAuthor}>{book.author}</p>}
+                  </div>
+                  <button
+                    className={styles.removeBookBtn}
+                    onClick={() => removeBookMutation.mutate({ listId: currentList.id, externalId: book.externalId })}
+                    title="Remove from list"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyTab}>
+              <div className={styles.emptyTitle}>Empty list</div>
+              <div className={styles.emptyDesc}>Add books from your diary using the picker above.</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── FavouriteBooks widget ───────────────────────────────────────────────── */
+function FavouriteBooks({ diaryItems, navigate, userId }) {
+  const favKey = userId ? `booklens-favourites-${userId}` : 'booklens-favourites'
+  const [favIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(favKey) || '[]') } catch { return [] }
+  })
+
+  const favItems = favIds.map(id => diaryItems.find(d => d.bookExternalId === id)).filter(Boolean)
+  const displayItems = favItems.length > 0 ? favItems.slice(0, 4) : diaryItems.slice(0, 4)
+  const empties = Math.max(0, 4 - displayItems.length)
 
   return (
     <div className={styles.favGrid}>
       {displayItems.map(log => (
         log.bookCoverUrl ? (
-          <img
-            key={log.id}
-            src={log.bookCoverUrl}
-            alt={log.bookTitle}
+          <img key={log.id} src={log.bookCoverUrl} alt={log.bookTitle}
             className={styles.favCover}
             onClick={() => navigate(`/book/${log.bookExternalId}`)}
-            onError={e => { e.target.style.display = 'none' }}
-          />
+            onError={e => { e.target.style.display = 'none' }} />
         ) : (
-          <div
-            key={log.id}
+          <div key={log.id}
             className={`${styles.favCover} bc${colorIndex(log.bookExternalId)}`}
             title={log.bookTitle}
-            onClick={() => navigate(`/book/${log.bookExternalId}`)}
-          />
+            onClick={() => navigate(`/book/${log.bookExternalId}`)} />
         )
       ))}
       {Array.from({ length: empties }).map((_, i) => (
-        <div key={`empty-${i}`} className={styles.favCoverEmpty} />
+        <div key={`e-${i}`} className={styles.favCoverEmpty} />
       ))}
     </div>
   )
 }
 
-// ── Edit Favourites Modal ─────────────────────────────────────────────────────
-function EditFavouritesModal({ diaryItems, onClose }) {
-  const { user } = useAuthStore()
-  const favKey = user?.id ? `booklens-favourites-${user.id}` : 'booklens-favourites'
+/* ── Edit Favourites Modal ───────────────────────────────────────────────── */
+function EditFavouritesModal({ diaryItems, userId, onClose }) {
+  const favKey = userId ? `booklens-favourites-${userId}` : 'booklens-favourites'
   const [selected, setSelected] = useState(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(favKey) || '[]'))
-    } catch { return new Set() }
+    try { return new Set(JSON.parse(localStorage.getItem(favKey) || '[]')) } catch { return new Set() }
   })
 
   function toggle(id) {
     setSelected(prev => {
       const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else if (next.size < 4) {
-        next.add(id)
-      }
+      if (next.has(id)) next.delete(id)
+      else if (next.size < 4) next.add(id)
       return next
     })
   }
@@ -533,19 +719,13 @@ function EditFavouritesModal({ diaryItems, onClose }) {
             const isSel = selected.has(id)
             const isDisabled = !isSel && selected.size >= 4
             return (
-              <button
-                key={log.id}
+              <button key={log.id}
                 className={`${styles.favSelectItem} ${isSel ? styles.favSelectItemActive : ''} ${isDisabled ? styles.favSelectItemDisabled : ''}`}
-                onClick={() => !isDisabled && toggle(id)}
-                title={log.bookTitle}
+                onClick={() => !isDisabled && toggle(id)} title={log.bookTitle}
               >
                 {log.bookCoverUrl ? (
-                  <img
-                    src={log.bookCoverUrl}
-                    alt={log.bookTitle}
-                    className={styles.favSelectCover}
-                    onError={e => { e.target.style.display = 'none' }}
-                  />
+                  <img src={log.bookCoverUrl} alt={log.bookTitle} className={styles.favSelectCover}
+                    onError={e => { e.target.style.display = 'none' }} />
                 ) : (
                   <div className={`${styles.favSelectCover} bc${colorIndex(id)}`} />
                 )}
@@ -564,7 +744,7 @@ function EditFavouritesModal({ diaryItems, onClose }) {
   )
 }
 
-// ── Edit Profile Modal ────────────────────────────────────────────────────────
+/* ── Edit Profile Modal ──────────────────────────────────────────────────── */
 function EditProfileModal({ profile, username, onClose }) {
   const updateProfile = useUpdateProfile()
   const updateUser = useAuthStore(s => s.updateUser)
@@ -580,35 +760,24 @@ function EditProfileModal({ profile, username, onClose }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  function set(key, val) {
-    setForm(prev => ({ ...prev, [key]: val }))
-  }
+  function set(key, val) { setForm(prev => ({ ...prev, [key]: val })) }
 
   async function handleSave() {
-    setSaving(true)
-    setError('')
+    setSaving(true); setError('')
     try {
-      const updated = await updateProfile.mutateAsync({
+      await updateProfile.mutateAsync({
         displayName: form.displayName.trim() || undefined,
         bio: form.bio.trim() || undefined,
         location: form.location.trim() || undefined,
         readingGoal: Number(form.readingGoal) || 36,
       })
-      // Sync auth store so Navbar/avatar updates immediately
-      // Only update the fields the auth store actually cares about
-      updateUser({
-        displayName: form.displayName.trim() || undefined,
-        avatarUrl: form.avatarUrl || undefined,
-      })
-      // Invalidate profile query
+      updateUser({ displayName: form.displayName.trim() || undefined })
       queryClient.invalidateQueries({ queryKey: keys.users.profile(username) })
       setSuccess(true)
-      setTimeout(onClose, 800)
+      setTimeout(onClose, 700)
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to save. Please try again.')
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   return (
@@ -618,57 +787,30 @@ function EditProfileModal({ profile, username, onClose }) {
           <h2 className={styles.modalTitle}>Edit profile</h2>
           <button className={styles.modalClose} onClick={onClose}>×</button>
         </div>
-
         <div className={styles.formField}>
           <label className={styles.formLabel}>Display name</label>
-          <input
-            className={styles.formInput}
-            value={form.displayName}
-            onChange={e => set('displayName', e.target.value)}
-            placeholder="Your display name"
-            maxLength={100}
-          />
+          <input className={styles.formInput} value={form.displayName}
+            onChange={e => set('displayName', e.target.value)} placeholder="Your display name" maxLength={100} />
         </div>
-
         <div className={styles.formField}>
           <label className={styles.formLabel}>Bio</label>
-          <textarea
-            className={styles.formTextarea}
-            value={form.bio}
+          <textarea className={styles.formTextarea} value={form.bio}
             onChange={e => set('bio', e.target.value)}
-            placeholder="Tell other readers about yourself…"
-            rows={3}
-            maxLength={500}
-          />
+            placeholder="Tell other readers about yourself…" rows={3} maxLength={500} />
           <span className={styles.charCount}>{form.bio.length} / 500</span>
         </div>
-
         <div className={styles.formField}>
           <label className={styles.formLabel}>Location</label>
-          <input
-            className={styles.formInput}
-            value={form.location}
-            onChange={e => set('location', e.target.value)}
-            placeholder="City, Country"
-            maxLength={100}
-          />
+          <input className={styles.formInput} value={form.location}
+            onChange={e => set('location', e.target.value)} placeholder="City, Country" maxLength={100} />
         </div>
-
         <div className={styles.formField}>
           <label className={styles.formLabel}>Reading goal (books per year)</label>
-          <input
-            className={styles.formInput}
-            type="number"
-            min={1}
-            max={500}
-            value={form.readingGoal}
-            onChange={e => set('readingGoal', e.target.value)}
-          />
+          <input className={styles.formInput} type="number" min={1} max={500}
+            value={form.readingGoal} onChange={e => set('readingGoal', e.target.value)} />
         </div>
-
         {error && <p className={styles.formError}>{error}</p>}
         {success && <p className={styles.formSuccess}>Saved!</p>}
-
         <div className={styles.modalActions}>
           <button className={styles.btnGhost} onClick={onClose}>Cancel</button>
           <button className={styles.btnPrimary} onClick={handleSave} disabled={saving}>

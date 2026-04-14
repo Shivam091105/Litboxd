@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { booksApi } from '../api/books'
@@ -88,6 +88,8 @@ export default function BookDetailPage() {
 
   const [imgFailed, setImgFailed] = useState(false)
   const [toast, setToast] = useState('')
+
+  const reviewPanelRef = useRef(null)
 
   /* Loading / error */
   if (bookQ.isLoading) return <BookDetailSkeleton />
@@ -208,7 +210,9 @@ export default function BookDetailPage() {
     setReviewContent(review.content || '')
     setHasSpoiler(review.hasSpoiler || false)
     setShowWriteReview(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setTimeout(() => {
+      reviewPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
   }
 
   function openWriteNew() {
@@ -217,6 +221,10 @@ export default function BookDetailPage() {
     setReviewContent('')
     setHasSpoiler(false)
     setShowWriteReview(true)
+    // Scroll to review panel after it renders
+    setTimeout(() => {
+      reviewPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
   }
 
   /* ── Render ── */
@@ -372,7 +380,7 @@ export default function BookDetailPage() {
 
       {/* ── WRITE / EDIT REVIEW PANEL ── */}
       {showWriteReview && (
-        <div className={styles.logPanel}>
+        <div className={styles.logPanel} ref={reviewPanelRef}>
           <h3 className={styles.logPanelTitle}>
             {editingReview ? 'Edit your review' : `Review "${title}"`}
           </h3>

@@ -120,7 +120,7 @@ public class UserController {
         List<Map<String, Object>> recs = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
         // ── Tier 1: highly-rated seeds → genre + author ───────────────────
-        for (String bookId : highlyRatedIds.stream().limit(5).collect(Collectors.toList())) {
+        for (String bookId : highlyRatedIds.stream().limit(3).collect(Collectors.toList())) {
             if (recs.size() >= 20) break;
             try {
                 BookDto seed = bookApiService.getBookDetail(bookId);
@@ -151,7 +151,7 @@ public class UserController {
         // ── Tier 2: any rated book (lower ratings still give signal) ──────
         List<String> lowerRatedIds = anyRatedIds.stream()
                 .filter(id -> !highlyRatedIds.contains(id))
-                .limit(4)
+                .limit(2)
                 .collect(Collectors.toList());
 
         for (String bookId : lowerRatedIds) {
@@ -168,7 +168,7 @@ public class UserController {
         }
 
         // ── Tier 3: currently reading ──────────────────────────────────────
-        for (String bookId : currentlyReading.stream().limit(3).collect(Collectors.toList())) {
+        for (String bookId : currentlyReading.stream().limit(2).collect(Collectors.toList())) {
             if (recs.size() >= 20) break;
             try {
                 BookDto seed = bookApiService.getBookDetail(bookId);
@@ -201,7 +201,7 @@ public class UserController {
             }
         }
 
-        return ResponseEntity.ok(recs.stream().limit(20).collect(Collectors.toList()));
+        return ResponseEntity.ok(recs.stream().limit(12).collect(Collectors.toList()));
     }
 
     private void addCandidates(
