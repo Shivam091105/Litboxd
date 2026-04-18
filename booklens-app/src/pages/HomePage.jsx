@@ -8,7 +8,7 @@ import SectionHeader from '../components/ui/SectionHeader'
 import { BookCardSkeleton, ReviewCardSkeleton, ActivityItemSkeleton } from '../components/ui/Skeleton'
 import { usePopularBooks } from '../hooks/useBooks'
 import { usePopularReviews } from '../hooks/useReviews'
-import { useFeed, useChallenge, useSuggestions, useRecommendations } from '../hooks/useUser'
+import { useFeed, useChallenge, useRecommendations } from '../hooks/useUser'
 import useAuthStore from '../store/authStore'
 import { nowReading } from '../data/mockData'   // still static — not a user-specific endpoint
 import styles from './HomePage.module.css'
@@ -94,7 +94,7 @@ export default function HomePage() {
         <div className={styles.crDivider} />
         <div className={styles.crScroll}>
           {nowReading.map((r, i) => (
-            <div key={i} className={styles.crItem}>
+            <div key={i} className={styles.crItem} onClick={() => navigate('/members')}>
               <div className={`${styles.crCover} ${r.coverColor}`} />
               <span className={styles.crText}>
                 <strong>{r.user}</strong> — {r.title}
@@ -119,27 +119,7 @@ export default function HomePage() {
 
       {/* ── RECOMMENDATIONS (only shown to logged-in users who have ratings) ── */}
       {isAuthenticated && recommendations?.length > 0 && (
-        <div className={styles.section} style={{ paddingTop: 0 }}>
-          <SectionHeader title="Recommended for you" linkLabel="See all →" />
-          <div className={styles.booksGrid}>
-            {recommendations.slice(0, 24).map((rec, i) => (
-              <BookCard
-                key={rec.externalId ?? rec.id ?? i}
-                book={{
-                  externalId: rec.externalId,
-                  title: rec.title,
-                  author: rec.author,
-                  coverUrl: rec.coverUrl,
-                  coverUrlSmall: rec.coverUrlSmall,
-                  coverColor: 'bc' + ((i % 8) + 1),
-                  averageRating: rec.averageRating,
-                  ratingsCount: rec.ratingsCount,
-                }}
-                badge={rec.reason}
-              />
-            ))}
-          </div>
-        </div>
+        <RecommendationsSection recommendations={recommendations} navigate={navigate} />
       )}
 
       {/* ── FEED + SIDEBAR ── */}
@@ -149,6 +129,7 @@ export default function HomePage() {
             <SectionHeader
               title={isAuthenticated ? 'Friend activity' : 'Recent activity'}
               linkLabel="Following · You →"
+              onLinkClick={() => navigate(isAuthenticated ? '/profile' : '/login')}
             />
             <div>
               {feedLoading
@@ -177,7 +158,7 @@ export default function HomePage() {
 
       {/* ── POPULAR REVIEWS ── */}
       <div className={`${styles.section} ${styles.sectionBorder}`}>
-        <SectionHeader title="Popular reviews this week" linkLabel="All reviews →" />
+        <SectionHeader title="Popular reviews this week" linkLabel="All reviews →" onLinkClick={() => navigate('/browse')} />
         <div className={styles.reviewsGrid}>
           {reviewsLoading
             ? Array.from({ length: 3 }).map((_, i) => <ReviewCardSkeleton key={i} />)
@@ -287,5 +268,62 @@ function FeedEmpty({ isAuthenticated, navigate }) {
     <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>
       Follow some readers to see their activity here.
     </p>
+  )
+}
+/* ── Recommendations section with scroll-row + expand ─────────────────────── */
+function RecommendationsSection({ recommendations, navigate }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className={styles.section} style={{ paddingTop: 0 }}>
+      <SectionHeader
+        title="Recommended for you"
+        linkLabel={expanded ? 'Show less ↑' : 'See all →'}
+        onLinkClick={() => setExpanded(p => !p)}
+      />
+
+      {expanded ? (
+        /* Full grid — all recommendations */
+        <div className={styles.booksGrid}>
+          {recommendations.map((rec, i) => (
+            <BookCard
+              key={rec.externalId ?? i}
+              book={{
+                externalId: rec.externalId,
+                title: rec.title,
+                author: rec.author,
+                coverUrl: rec.coverUrl,
+                coverUrlSmall: rec.coverUrlSmall,
+                coverColor: 'bc' + ((i % 8) + 1),
+                averageRating: rec.averageRating,
+                ratingsCount: rec.ratingsCount,
+              }}
+              badge={rec.reason}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Horizontal scroll row — same pattern as BrowsePage genre rows */
+        <div className={styles.recScroll}>
+          {recommendations.map((rec, i) => (
+            <div key={rec.externalId ?? i} className={styles.recScrollItem}>
+              <BookCard
+                book={{
+                  externalId: rec.externalId,
+                  title: rec.title,
+                  author: rec.author,
+                  coverUrl: rec.coverUrl,
+                  coverUrlSmall: rec.coverUrlSmall,
+                  coverColor: 'bc' + ((i % 8) + 1),
+                  averageRating: rec.averageRating,
+                  ratingsCount: rec.ratingsCount,
+                }}
+                badge={rec.reason}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

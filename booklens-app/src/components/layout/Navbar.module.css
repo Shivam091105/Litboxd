@@ -1,6 +1,8 @@
 .nav {
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 200;
   display: flex;
   align-items: center;
@@ -57,8 +59,15 @@
   display: block;
 }
 
-.links a:hover { color: var(--text-primary); background: var(--bg-elevated); }
-.links a.active { color: var(--text-primary); background: var(--bg-elevated); }
+.links a:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.links a.active {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
 
 /* Right section */
 .right {
@@ -80,9 +89,15 @@
   cursor: text;
 }
 
-.search:hover { border-color: var(--border-light); }
+.search:hover {
+  border-color: var(--border-light);
+}
 
-.searchIcon { color: var(--text-muted); font-size: 15px; line-height: 1; }
+.searchIcon {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+}
 
 .searchInput {
   background: none;
@@ -93,7 +108,9 @@
   width: 160px;
 }
 
-.searchInput::placeholder { color: var(--text-muted); }
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
 
 /* Buttons */
 .btnOutline {
@@ -108,7 +125,10 @@
   letter-spacing: 0.2px;
 }
 
-.btnOutline:hover { border-color: var(--text-muted); color: var(--text-primary); }
+.btnOutline:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
 
 .btnPrimary {
   padding: 7px 18px;
@@ -122,7 +142,10 @@
   letter-spacing: 0.2px;
 }
 
-.btnPrimary:hover { background: #00e085; box-shadow: var(--shadow-green); }
+.btnPrimary:hover {
+  background: #00e085;
+  box-shadow: var(--shadow-green);
+}
 
 /* Avatar */
 .avatar {
@@ -142,4 +165,265 @@
   text-decoration: none;
 }
 
-.avatar:hover { border-color: var(--accent-green); }
+.avatar:hover {
+  border-color: var(--accent-green);
+}
+
+/* ── HAMBURGER (hidden on desktop) ──────────────────────────────────────── */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+
+.hamburger:hover {
+  background: var(--bg-elevated);
+}
+
+.hamburgerLine {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--text-secondary);
+  border-radius: 2px;
+  transition: transform 0.25s, opacity 0.25s;
+  transform-origin: center;
+}
+
+/* Animate to X when open */
+.hOpen1 {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.hOpen2 {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.hOpen3 {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ── MOBILE OVERLAY + DRAWER ─────────────────────────────────────────────── */
+.mobileOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.mobileDrawer {
+  position: absolute;
+  top: var(--nav-h);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 20px 28px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mobileSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+}
+
+.mobileSearch:focus-within {
+  border-color: var(--border-light);
+}
+
+.mobileSearchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.mobileSearchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.mobileLinks {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 20px;
+}
+
+.mobileLink {
+  display: block;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mobileLink:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.mobileLinkActive {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.mobileAuth {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.mobileProfileRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  margin-bottom: 12px;
+  transition: background 0.15s;
+}
+
+.mobileProfileRow:hover {
+  background: var(--bg-elevated);
+}
+
+.mobileUsername {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mobileHandle {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.mobileSignOut {
+  width: 100%;
+  padding: 10px;
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+
+.mobileSignOut:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.mobileAuthBtns {
+  display: flex;
+  gap: 10px;
+}
+
+.mobileBtnOutline {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.mobileBtnOutline:hover {
+  border-color: var(--border-light);
+  color: var(--text-primary);
+}
+
+.mobileBtnPrimary {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  background: var(--accent-green);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #0d0f0e;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.mobileBtnPrimary:hover {
+  background: #00e085;
+}
+
+/* ── BREAKPOINTS ─────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .nav {
+    padding: 0 24px;
+  }
+
+  .search {
+    display: none;
+  }
+
+  .btnOutline,
+  .btnPrimary {
+    display: none;
+  }
+
+  /* Keep avatar visible — it's the profile shortcut */
+}
+
+@media (max-width: 768px) {
+  .links {
+    display: none;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .mobileOverlay {
+    display: block;
+  }
+}

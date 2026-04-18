@@ -1274,3 +1274,145 @@
 .listBookCard:hover .removeBookBtn {
   opacity: 1;
 }
+
+/* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .headerInner {
+    padding: 0 24px 24px;
+  }
+
+  .tabBarInner {
+    padding: 0 24px;
+  }
+
+  .body {
+    padding: 28px 24px;
+  }
+
+  .tabContent {
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 860px) {
+  .body {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .statBox:nth-child(4),
+  .statBox:nth-child(5) {
+    border-top: 1px solid var(--border);
+  }
+
+  .avatarXl {
+    width: 80px;
+    height: 80px;
+    font-size: 28px;
+  }
+
+  .name {
+    font-size: 22px;
+  }
+
+  .headerInner {
+    margin-top: -40px;
+  }
+
+  .reviewsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .listsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .banner {
+    height: 120px;
+  }
+
+  .headerInner {
+    padding: 0 16px 20px;
+    flex-wrap: wrap;
+    margin-top: -36px;
+  }
+
+  .avatarXl {
+    width: 72px;
+    height: 72px;
+    font-size: 24px;
+    border-width: 3px;
+  }
+
+  .identity {
+    padding-bottom: 4px;
+  }
+
+  .name {
+    font-size: 20px;
+  }
+
+  .actions {
+    width: 100%;
+    flex-direction: row;
+  }
+
+  .tabBarInner {
+    padding: 0 12px;
+    overflow-x: auto;
+    min-width: 0;
+  }
+
+  .tab {
+    padding: 12px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .body,
+  .tabContent {
+    padding: 20px 16px 48px;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .recentCovers {
+    gap: 8px;
+  }
+
+  .rCover {
+    width: 48px;
+    height: 72px;
+  }
+
+  .listsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .diaryItem {
+    padding: 12px 12px;
+  }
+
+  .diaryCover {
+    width: 36px;
+    height: 54px;
+  }
+}

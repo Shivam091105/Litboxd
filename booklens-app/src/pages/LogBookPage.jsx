@@ -10,7 +10,7 @@ import useAuthStore from '../store/authStore'
 import styles from './LogBookPage.module.css'
 
 const STATUS_TABS = ['Read', 'Currently Reading', 'Want to Read']
-const STATUS_MAP  = { 'Read': 'READ', 'Currently Reading': 'READING', 'Want to Read': 'WANT' }
+const STATUS_MAP = { 'Read': 'READ', 'Currently Reading': 'READING', 'Want to Read': 'WANT' }
 
 export default function LogBookPage() {
   const navigate = useNavigate()
@@ -39,30 +39,30 @@ export default function LogBookPage() {
 }
 
 function LogBookForm() {
-  const [searchQuery, setSearchQuery]   = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [activeSearch, setActiveSearch] = useState('')
   const [selectedBook, setSelectedBook] = useState(null)
-  const [status, setStatus]             = useState('Read')
-  const [rating, setRating]             = useState(4)
-  const [review, setReview]             = useState('')
-  const [startedAt, setStartedAt]       = useState('')
-  const [finishedAt, setFinishedAt]     = useState('')
-  const [spoiler, setSpoiler]           = useState(false)
-  const [privateEntry, setPrivate]      = useState(false)
-  const [reread, setReread]             = useState(false)
-  const [tags, setTags]                 = useState('')
-  const [toast, setToast]               = useState(false)
+  const [status, setStatus] = useState('Read')
+  const [rating, setRating] = useState(4)
+  const [review, setReview] = useState('')
+  const [startedAt, setStartedAt] = useState('')
+  const [finishedAt, setFinishedAt] = useState('')
+  const [spoiler, setSpoiler] = useState(false)
+  const [privateEntry, setPrivate] = useState(false)
+  const [reread, setReread] = useState(false)
+  const [tags, setTags] = useState('')
+  const [toast, setToast] = useState(false)
 
   // ── API hooks ──────────────────────────────────────────────────────────
   // useBookSearch now returns { books: [], totalResults, hasMore, query }
   const { data: searchData, isLoading: searching, isFetching } = useBookSearch(activeSearch)
-  const logBook   = useLogBook()
+  const logBook = useLogBook()
   const deleteLog = useDeleteLog()
   const { data: diaryData, isLoading: diaryLoading } = useDiary(null, 20)
 
   // Normalise: new API returns { books: [...] }
   const searchResults = searchData?.books ?? []
-  const diaryItems    = Array.isArray(diaryData) ? diaryData : diaryData?.content ?? []
+  const diaryItems = Array.isArray(diaryData) ? diaryData : diaryData?.content ?? []
 
   function handleSearch(e) {
     e.preventDefault()
@@ -75,12 +75,12 @@ function LogBookForm() {
     await logBook.mutateAsync({
       bookExternalId: selectedBook.externalId,   // ← Open Library work ID
       payload: {
-        status:       STATUS_MAP[status],
+        status: STATUS_MAP[status],
         rating,
         reread,
         privateEntry,
         tags,
-        ...(startedAt  && { startedAt }),
+        ...(startedAt && { startedAt }),
         ...(finishedAt && { finishedAt }),
       }
     })
@@ -153,7 +153,7 @@ function LogBookForm() {
                 <div className={styles.rMeta}>
                   {book.publishYear && <span>{book.publishYear}</span>}
                   {book.genres?.[0] && <span> · {book.genres[0]}</span>}
-                  {book.pageCount  && <span> · {book.pageCount} pages</span>}
+                  {book.pageCount && <span> · {book.pageCount} pages</span>}
                 </div>
               </div>
               <button
@@ -309,22 +309,27 @@ function LogBookForm() {
 
       {/* Diary */}
       <div style={{ marginTop: 48 }}>
-        <SectionHeader title="Recently logged" linkLabel="View all →" />
+        <SectionHeader title="Recently logged" linkLabel="View all →" onLinkClick={() => navigate('/profile')} />
         {diaryLoading ? (
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading diary…</p>
         ) : diaryItems.length > 0 ? (
           <div className={styles.loggedList}>
             {diaryItems.map(log => (
-              <div key={log.id} className={styles.loggedItem}>
+              <div
+                key={log.id}
+                className={styles.loggedItem}
+                onClick={() => log.bookExternalId && navigate(`/book/${log.bookExternalId}`)}
+                style={{ cursor: log.bookExternalId ? 'pointer' : 'default' }}
+              >
                 {log.bookCoverUrl ? (
                   <img
                     src={log.bookCoverUrl}
                     alt={log.bookTitle}
                     className={styles.loggedCoverImg}
-                    onError={e => e.target.style.display='none'}
+                    onError={e => e.target.style.display = 'none'}
                   />
                 ) : (
-                  <div className={`${styles.loggedCover} bc1`} />
+                  <div className={`${styles.loggedCover} bc${((log.bookExternalId?.charCodeAt(2) ?? 1) % 8) + 1}`} />
                 )}
                 <div className={styles.loggedInfo}>
                   <div className={styles.loggedTitle}>{log.bookTitle || log.bookExternalId}</div>
@@ -334,15 +339,15 @@ function LogBookForm() {
                   </div>
                   <div className={styles.loggedDate}>
                     {log.finishedAt ? `Finished ${fmtDate(log.finishedAt)}` :
-                     log.startedAt  ? `Started ${fmtDate(log.startedAt)}`  :
-                     `Added ${fmtDate(log.updatedAt)}`}
+                      log.startedAt ? `Started ${fmtDate(log.startedAt)}` :
+                        `Added ${fmtDate(log.updatedAt)}`}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
                   <StatusPill status={log.status} />
                   <button
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', padding: 0 }}
-                    onClick={() => deleteLog.mutate(log.id)}
+                    onClick={e => { e.stopPropagation(); deleteLog.mutate(log.id) }}
                     disabled={deleteLog.isPending}
                   >
                     Remove

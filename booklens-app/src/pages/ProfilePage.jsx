@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReviewCard from '../components/book/ReviewCard'
@@ -190,8 +190,13 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
-
+            <br></br>
+            <br></br>
             {/* Reading challenge */}
+            <div className={styles.subHeader}>
+              <h3 className={styles.subTitle}>Reading Challenge</h3>
+              {/* <button className={styles.subLink} onClick={() => setActiveTab('Challenge')}>View challenge</button> */}
+            </div>
             {challenge && (
               <div className={styles.challengeBox}>
                 <div className={styles.challengeTop}>
@@ -352,10 +357,7 @@ export default function ProfilePage() {
 
       {/* ── NETWORK TAB ── */}
       {activeTab === 'Network' && (
-        <div className={styles.emptyTab}>
-          <div className={styles.emptyTitle}>Network</div>
-          <div className={styles.emptyDesc}>People you follow and your followers.</div>
-        </div>
+        <NetworkTab profile={profile} profileLoading={profileLoading} />
       )}
 
       {showEdit && (
@@ -647,6 +649,128 @@ function ListsTab({ userId, diaryItems, navigate }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── Network Tab ─────────────────────────────────────────────────────────── */
+const NETWORK_SEED = [
+  { username: 'priya_reads', displayName: 'Priya Sharma', booksRead: 284, color: 'linear-gradient(135deg,#1c5e3a,#0d2e1a)' },
+  { username: 'maya_liu', displayName: 'Maya Liu', booksRead: 431, color: 'linear-gradient(135deg,#5e1c3a,#2e0a1f)' },
+  { username: 'literaryleo', displayName: 'Leonardo Rossi', booksRead: 356, color: 'linear-gradient(135deg,#3a3a1c,#1f1f0a)' },
+  { username: 'bookish_dan', displayName: 'Dan Okafor', booksRead: 197, color: 'linear-gradient(135deg,#1c3a5e,#0a1f3a)' },
+  { username: 'readingwren', displayName: 'Wren Nakamura', booksRead: 163, color: 'linear-gradient(135deg,#2d1b4e,#180f2e)' },
+  { username: 'jorge_b', displayName: 'Jorge Beltrán', booksRead: 847, color: 'linear-gradient(135deg,#5e1c1c,#2e0a0a)' },
+]
+
+function NetworkTab({ profile, profileLoading }) {
+  const navigate = useNavigate()
+  const [networkTab, setNetworkTab] = useState('following')
+  const [following, setFollowing] = useState(new Set(['priya_reads', 'maya_liu', 'literaryleo']))
+
+  const followingList = NETWORK_SEED.filter(u => following.has(u.username))
+  const followerList = NETWORK_SEED.slice(0, 4)
+
+  const displayed = networkTab === 'following' ? followingList : followerList
+
+  function toggleFollow(username) {
+    setFollowing(prev => {
+      const next = new Set(prev)
+      next.has(username) ? next.delete(username) : next.add(username)
+      return next
+    })
+  }
+
+  return (
+    <div className={styles.tabContent}>
+      {/* Sub-tabs */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
+        {[['following', `Following (${followingList.length})`], ['followers', `Followers (${followerList.length})`]].map(([key, label]) => (
+          <button
+            key={key}
+            className={`${styles.tab} ${networkTab === key ? styles.tabActive : ''}`}
+            onClick={() => setNetworkTab(key)}
+            style={{ fontSize: 13, padding: '12px 20px' }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {displayed.length === 0 ? (
+        <div className={styles.emptyTab}>
+          <div className={styles.emptyTitle}>
+            {networkTab === 'following' ? 'Not following anyone yet' : 'No followers yet'}
+          </div>
+          <div className={styles.emptyDesc}>
+            {networkTab === 'following'
+              ? 'Find readers to follow in the Members section.'
+              : 'Share your profile to gain followers.'}
+          </div>
+          {networkTab === 'following' && (
+            <button
+              onClick={() => navigate('/members')}
+              style={{ marginTop: 16, background: 'var(--accent-green)', color: '#0d0f0e', border: 'none', borderRadius: 20, padding: '8px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+            >
+              Browse members →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          {displayed.map((u, i) => {
+            const initials = u.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+            const isFollowing = following.has(u.username)
+            return (
+              <div key={u.username} style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
+                borderBottom: i < displayed.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: u.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', flexShrink: 0 }}>
+                  {initials}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{u.displayName}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>@{u.username} · {u.booksRead} books</div>
+                </div>
+                <button
+                  onClick={() => toggleFollow(u.username)}
+                  style={{
+                    padding: '6px 16px', border: `1px solid ${isFollowing ? 'var(--accent-green)' : 'var(--border-light)'}`,
+                    background: isFollowing ? 'var(--accent-green-dim)' : 'transparent',
+                    color: isFollowing ? 'var(--accent-green)' : 'var(--text-secondary)',
+                    borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
+                  }}
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
+                <button
+                  onClick={() => navigate('/members')}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, transition: 'color 0.2s' }}
+                  title="View profile"
+                >
+                  →
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Discover more */}
+      <div style={{ marginTop: 24, padding: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text-muted)', marginBottom: 12 }}>Discover readers</div>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+          Find readers who share your taste in books. Browse the Members section to discover literary companions.
+        </p>
+        <button
+          onClick={() => navigate('/members')}
+          style={{ background: 'var(--accent-green)', color: '#0d0f0e', border: 'none', borderRadius: 20, padding: '8px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+        >
+          Browse all members →
+        </button>
+      </div>
     </div>
   )
 }
