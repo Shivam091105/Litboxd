@@ -1,133 +1,225 @@
 # BookLens 📚
 
-A full-stack social reading platform where users can track books, write reviews, rate titles, and curate reading lists — powered by the [Open Library API](https://openlibrary.org/developers/api).
-
-> Built with **Spring Boot 3** · **React 19 + Vite** · **PostgreSQL** · **Redis** · **JWT Auth**
+A social reading tracker — log, rate, and review every book you read, discover what friends are reading, and build your literary identity.
 
 ---
 
 ## Table of Contents
 
-- [Features](#features)
+- [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [Features](#features)
+- [API Reference](#api-reference)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Backend Setup](#backend-setup)
   - [Frontend Setup](#frontend-setup)
 - [Environment Variables](#environment-variables)
-- [API Reference](#api-reference)
-- [Recommendation Engine](#recommendation-engine)
-- [Authentication Flow](#authentication-flow)
-- [Deployment](#deployment)
-- [Roadmap](#roadmap)
+- [Architecture Notes](#architecture-notes)
 
 ---
 
-## Features
+## Overview
 
-- **Authentication** — Email/password registration & login, Google OAuth2 sign-in, JWT with silent token refresh
-- **Book discovery** — Search the Open Library catalog, browse by subject/genre, view popular & top-rated lists
-- **Reading log** — Track books as *Want to Read*, *Currently Reading*, or *Read*; log dates and personal ratings
-- **Reviews** — Write, edit, and delete reviews; like reviews; view a weekly popular reviews feed
-- **Social** — Follow other readers, activity feed from people you follow, suggested users to follow
-- **Personalized recommendations** — Hybrid collaborative + content-based engine (cached in Redis)
-- **Reading challenge** — Track annual reading goal progress
+BookLens is a full-stack web application for book lovers. It integrates with the **Open Library API** (no API key required) to give users access to millions of books. Users can log their reading activity, write reviews, follow other readers, build custom lists, and receive personalised recommendations.
 
 ---
 
 ## Tech Stack
 
-### Backend
-| Layer | Technology |
-|---|---|
-| Language | Java 21 |
-| Framework | Spring Boot 3.2 |
-| Security | Spring Security + JWT (jjwt 0.12) |
-| Database | PostgreSQL 15+ (Spring Data JPA / Hibernate) |
-| Caching | Redis (Spring Data Redis) |
-| HTTP Client | Spring WebFlux `WebClient` |
-| External API | Open Library (free, no API key needed) |
-| Social Auth | Google OAuth2 (`google-api-client` 2.4) |
-| Build | Maven 3.9+ |
-
 ### Frontend
-| Layer | Technology |
-|---|---|
-| Framework | React 19 |
-| Build tool | Vite 8 |
-| Routing | React Router 7 |
-| Server state | TanStack React Query 5 |
-| Client state | Zustand 5 |
-| HTTP | Axios 1.14 (with JWT interceptor) |
-| Social auth | `@react-oauth/google` |
-| Styling | CSS Modules + design tokens |
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19 | UI framework |
+| Vite | 8 | Build tool & dev server |
+| React Router | 7 | Client-side routing |
+| TanStack Query | 5 | Server state, caching & data fetching |
+| Zustand | 5 | Auth state management |
+| Axios | 1.14 | HTTP client with JWT interceptors |
+| `@react-oauth/google` | 0.13 | Google One-Tap / OAuth login |
+| CSS Modules | — | Scoped component styles |
+
+### Backend
+| Technology | Version | Purpose |
+|---|---|---|
+| Spring Boot | 3.2.5 | REST API framework |
+| Spring Security + JWT | — | Authentication & authorisation |
+| Spring Data JPA / Hibernate | — | ORM & database access |
+| PostgreSQL | — | Primary database |
+| Redis | — | Caching (books, recommendations) |
+| Spring WebFlux WebClient | — | Reactive HTTP client for Open Library |
+| Lombok | — | Boilerplate reduction |
 
 ---
 
 ## Project Structure
 
 ```
-BookLens/
-├── booklens-app/               # React + Vite frontend
+BookLens-main/
+├── booklens-app/               # React frontend (Vite)
+│   ├── public/
 │   ├── src/
-│   │   ├── api/                # Axios client + per-resource modules
-│   │   │   ├── client.js       # Base Axios instance, JWT interceptor, auto-refresh
-│   │   │   ├── auth.js
-│   │   │   ├── books.js
-│   │   │   ├── logs.js
-│   │   │   ├── reviews.js
-│   │   │   └── users.js
+│   │   ├── api/                # Axios API modules (auth, books, lists, logs, reviews, users)
 │   │   ├── components/
 │   │   │   ├── book/           # BookCard, ReviewCard
-│   │   │   ├── feed/           # ActivityItem, Sidebar
-│   │   │   ├── layout/         # Navbar, Footer, Layout
-│   │   │   └── ui/             # Badge, StarRating, Skeleton, Toast, etc.
+│   │   │   ├── feed/           # ActivityItem, Sidebar (reading challenge, trending lists, suggestions)
+│   │   │   ├── layout/         # Navbar, Footer, Layout wrapper
+│   │   │   └── ui/             # Badge, StarRating, Toast, Skeleton, PageIndicator, ErrorBoundary
+│   │   ├── data/               # Static mock data (fallback seeds)
 │   │   ├── hooks/              # useBooks, useReviews, useUser (React Query wrappers)
-│   │   ├── pages/              # One file per route
-│   │   ├── store/
-│   │   │   └── authStore.js    # Zustand auth store (persisted)
-│   │   └── styles/
-│   │       └── tokens.css      # Global design tokens
+│   │   ├── pages/              # Route-level page components
+│   │   ├── store/              # Zustand auth store
+│   │   ├── styles/             # Global CSS design tokens
+│   │   └── main.jsx
 │   ├── .env.example
 │   └── vite.config.js
 │
 └── booklens-backend/           # Spring Boot backend
-    └── src/main/java/com/booklens/
-        ├── BookLensApplication.java
-        ├── books/
-        │   ├── BookApiService.java
-        │   └── OpenLibraryClient.java
-        ├── config/
-        │   ├── SecurityConfig.java     # CORS, JWT filter chain, public routes
-        │   └── CacheConfig.java        # Redis cache settings
-        ├── controller/
-        │   ├── AuthController.java
-        │   ├── BookController.java
-        │   ├── BookLogController.java
-        │   ├── ReviewController.java
-        │   ├── UserController.java
-        │   └── GoogleAuthController.java
-        ├── dto/                        # Request / response DTOs
-        ├── entity/
-        │   ├── User.java
-        │   ├── BookLog.java
-        │   ├── Review.java
-        │   └── BookList.java
-        ├── exception/
-        │   ├── BookLensException.java
-        │   └── GlobalExceptionHandler.java
-        ├── repository/                 # Spring Data JPA + JPQL queries
-        ├── security/
-        │   ├── JwtUtils.java
-        │   ├── JwtAuthFilter.java
-        │   └── UserDetailsServiceImpl.java
-        └── service/
-            ├── AuthService.java
-            ├── BookLogService.java
-            ├── ReviewService.java
-            └── UserService.java
+    ├── src/main/java/com/booklens/
+    │   ├── books/              # OpenLibraryClient, BookApiService
+    │   ├── config/             # Security, Cache, WebClient configuration
+    │   ├── controller/         # REST controllers (Auth, Book, BookList, BookLog, Review, User, GoogleAuth)
+    │   ├── dto/                # Request/response DTOs
+    │   ├── entity/             # JPA entities (User, BookLog, Review, BookList, UserRecommendation)
+    │   ├── exception/          # Global exception handler
+    │   ├── repository/         # Spring Data JPA repositories
+    │   ├── security/           # JWT filter, JwtUtils, UserDetailsServiceImpl
+    │   └── service/            # Business logic (Auth, BookLog, Review, User, Recommendation)
+    ├── src/main/resources/
+    │   └── application.yml
+    ├── setup.sql
+    └── pom.xml
 ```
+
+---
+
+## Features
+
+### Authentication
+- **Email/password registration and login** with JWT access tokens (24-hour expiry) and refresh tokens (7-day expiry).
+- **Google OAuth2 Sign-In** — the frontend sends a Google ID token; the backend verifies it and issues a BookLens JWT. No Google token handling is required after that point.
+- Automatic silent token refresh on 401 responses via Axios interceptors. Failed requests are queued and replayed after the refresh succeeds.
+
+### Home Feed
+- Hero landing section for unauthenticated visitors.
+- **Activity feed** — a chronological stream of reading events from people you follow.
+- **Popular books** — top 8 books by community activity, fetched from the API.
+- **Popular reviews** — top 6 reviews by likes.
+- **Reading challenge progress** — annual challenge widget in the sidebar.
+- **Personalised recommendations** — shown in the sidebar for authenticated users.
+
+### Book Discovery
+- **Search** (`/search`) — full-text book search via Open Library. Results are debounced (minimum 2 characters) and paginated.
+- **Browse by genre** (`/browse`) — 18 genre filters (Fiction, Sci-Fi, Fantasy, Mystery, Romance, Thriller, Historical, Horror, Biography, Philosophy, Poetry, Psychology, History, Adventure, Classics, Young Adult, Literary Fiction, Non-Fiction) backed by Open Library's subjects API.
+- **Book detail** (`/book/:externalId`) — full metadata (title, author, cover, description, publish year, genres), community stats (average rating, ratings count, reviews count, logs count), a star rating distribution chart, and all reviews. Authenticated users also see their personal reading status and rating.
+
+### Reading Log (`/log`)
+- Search for any book and log it with:
+  - **Status**: `Read`, `Currently Reading`, or `Want to Read`
+  - **Star rating** (half-star increments, 0.5–5.0)
+  - **Written review**
+  - **Start and finish dates**
+  - **Flags**: spoiler marker, private entry, re-read indicator
+  - **Tags** (comma-separated)
+- View and manage your personal reading diary below the log form.
+- Delete individual log entries.
+
+### Profile (`/profile`)
+- Five-tab profile view: **Overview**, **Diary**, **Reviews**, **Lists**, **Network**.
+- Edit display name, bio, location, and website.
+- Manage **favourite books** (shown on the Overview tab).
+- Annual **reading challenge** progress bar.
+- **Statistics**: total books read, total reviews, followers count, following count.
+
+### Book Lists (`/lists`)
+- Every user gets three default lists automatically: **Read**, **Currently Reading**, **Want to Read**.
+- Create, rename, and delete custom lists.
+- Add or remove books from any list.
+- A curated **Discover Lists** section showcases community lists (e.g. "Books to Read Before 30", "Nobel Prize Winners, Ranked").
+
+### Members & Social (`/members`)
+- Browse and search the reader community.
+- **Follow / Unfollow** users.
+- View member profiles with their reading stats, bio, location, and top genres.
+- **Suggested users** widget recommends people to follow based on your network.
+- Inline preview of a member's recent reviews.
+
+### Recommendations
+- Netflix-style persistent recommendation pool (up to 15 items per user).
+- Pool is seeded from the user's highest-rated books on first access.
+- On every new log or rating, fresh candidates are computed from the newly logged book and injected at the front of the pool. Older items drift down and are dropped once the pool exceeds 15 entries.
+- Recommendations are cached in Redis (default 60-minute TTL) so reads are fast DB lookups, not re-computations.
+
+---
+
+## API Reference
+
+All endpoints are under `/api/v1`. JWT is required for protected routes (sent as `Authorization: Bearer <token>`).
+
+### Authentication
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/register` | — | Register with username, email, password |
+| POST | `/auth/login` | — | Login; returns `accessToken` + `refreshToken` |
+| POST | `/auth/refresh` | — | Exchange refresh token for new tokens |
+| POST | `/auth/google` | — | Verify Google ID token, return BookLens JWT |
+
+### Books
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/books/search?q=&page=&size=` | Optional | Search Open Library (paginated) |
+| GET | `/books/{externalId}` | Optional | Full book detail + community stats |
+| GET | `/books/{externalId}/rating-distribution` | — | Star rating breakdown for a book |
+| GET | `/books/subjects/{subject}?limit=&offset=` | — | Browse books by genre/subject |
+
+### Reading Log
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/books/{externalBookId}/log` | ✅ | Create or update a reading log entry |
+| GET | `/me/diary?status=&page=&size=` | ✅ | Your reading diary (filterable by status) |
+| DELETE | `/books/{externalBookId}/log` | ✅ | Remove a log entry |
+| GET | `/me/feed?page=&size=` | ✅ | Activity feed from followed users |
+| GET | `/me/challenge?year=` | ✅ | Annual reading challenge progress |
+| GET | `/books/{externalBookId}/logs?page=&size=` | — | All logs for a specific book |
+
+### Reviews
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/books/{externalBookId}/reviews` | ✅ | Write a review |
+| PUT | `/reviews/{reviewId}` | ✅ | Edit your review |
+| DELETE | `/reviews/{reviewId}` | ✅ | Delete your review |
+| GET | `/books/{externalBookId}/reviews?page=&size=` | — | All reviews for a book |
+| GET | `/reviews/popular?page=&size=` | — | Most-liked reviews globally |
+| POST | `/reviews/{reviewId}/like` | ✅ | Like a review |
+| DELETE | `/reviews/{reviewId}/like` | ✅ | Unlike a review |
+
+### Book Lists
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/me/lists` | ✅ | Get all your lists |
+| POST | `/me/lists` | ✅ | Create a new list |
+| PUT | `/me/lists/{listId}` | ✅ | Rename / update list description |
+| DELETE | `/me/lists/{listId}` | ✅ | Delete a list (not the 3 defaults) |
+| POST | `/me/lists/{listId}/books` | ✅ | Add a book to a list |
+| DELETE | `/me/lists/{listId}/books/{externalId}` | ✅ | Remove a book from a list |
+| POST | `/me/lists/ensure-defaults` | ✅ | Create default lists if missing |
+
+### Users & Social
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/users/{username}` | Optional | Public profile view |
+| PATCH | `/me` | ✅ | Update your profile |
+| POST | `/users/{userId}/follow` | ✅ | Follow a user |
+| DELETE | `/users/{userId}/follow` | ✅ | Unfollow a user |
+| GET | `/me/suggestions?limit=` | ✅ | Suggested users to follow |
+| GET | `/me/recommendations` | ✅ | Personalised book recommendations |
 
 ---
 
@@ -135,11 +227,11 @@ BookLens/
 
 ### Prerequisites
 
-- **Java 21**
-- **Maven 3.9+**
-- **Node.js 20+**
-- **PostgreSQL 15+** running locally
-- **Redis** running locally (`redis-server`)
+- **Node.js** 18+ and npm
+- **Java** 21+
+- **PostgreSQL** 15+
+- **Redis** 7+
+- A Google Cloud project with an OAuth2 Client ID (for Google Sign-In)
 
 ---
 
@@ -147,42 +239,50 @@ BookLens/
 
 **1. Create the database**
 
-```bash
-psql -U postgres -f booklens-backend/setup.sql
-```
-
-Or manually:
-
 ```sql
 CREATE DATABASE booklens;
 ```
 
+Or run the provided script:
+
+```bash
+psql -U postgres -f booklens-backend/setup.sql
+```
+
 **2. Configure `application.yml`**
 
-Open `booklens-backend/src/main/resources/application.yml` and update:
+Edit `booklens-backend/src/main/resources/application.yml`:
 
 ```yaml
 spring:
   datasource:
-    password: YOUR_POSTGRES_PASSWORD   # change this
-
-google:
-  client-id: YOUR_GOOGLE_CLIENT_ID    # from console.cloud.google.com
+    url: jdbc:postgresql://localhost:5432/booklens
+    username: postgres
+    password: your_postgres_password
 
 jwt:
-  secret: replace-with-a-long-random-256-bit-string
+  secret: your-256-bit-secret-key-here   # Must be at least 32 characters
+
+google:
+  client-id: YOUR_GOOGLE_CLIENT_ID_HERE
 ```
 
-**3. Run the backend**
+On first run, Hibernate will auto-create all tables (`ddl-auto: update`). Switch to `validate` in production once the schema is stable.
+
+**3. Start Redis**
+
+```bash
+redis-server
+```
+
+**4. Run the backend**
 
 ```bash
 cd booklens-backend
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
 
-The API starts at `http://localhost:8080`. On first run, Hibernate automatically creates all tables (`ddl-auto: update`).
-
-> **Production note:** Switch `ddl-auto` to `validate` once your schema is stable.
+The API will be available at `http://localhost:8080`.
 
 ---
 
@@ -195,13 +295,13 @@ cd booklens-app
 npm install
 ```
 
-**2. Create your `.env` file**
+**2. Configure environment variables**
 
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env`:
+Edit `.env`:
 
 ```env
 VITE_API_URL=http://localhost:8080/api/v1
@@ -214,174 +314,46 @@ VITE_GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID_HERE
 npm run dev
 ```
 
-The app runs at `http://localhost:5173`.
+The app will be available at `http://localhost:5173`.
 
 ---
 
 ## Environment Variables
 
-### Frontend (`booklens-app/.env`)
+### Frontend (`.env`)
 
-| Variable | Description | Example |
+| Variable | Required | Description |
 |---|---|---|
-| `VITE_API_URL` | Backend base URL | `http://localhost:8080/api/v1` |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID | `123456.apps.googleusercontent.com` |
+| `VITE_API_URL` | Yes | Base URL for the Spring Boot backend API |
+| `VITE_GOOGLE_CLIENT_ID` | Yes | Google OAuth2 client ID for Google Sign-In |
 
 ### Backend (`application.yml`)
 
-| Key | Description |
-|---|---|
-| `spring.datasource.password` | PostgreSQL password |
-| `spring.data.redis.host` | Redis host (default `localhost`) |
-| `jwt.secret` | HS256 signing key (min 256 bits) |
-| `jwt.expiration-ms` | Access token TTL (default 24h) |
-| `jwt.refresh-expiration-ms` | Refresh token TTL (default 7d) |
-| `google.client-id` | Google OAuth2 client ID |
-| `recommendation.collaborative-weight` | CF weight in hybrid score |
-| `recommendation.content-weight` | CBF weight in hybrid score |
+| Key | Required | Description |
+|---|---|---|
+| `spring.datasource.url` | Yes | PostgreSQL JDBC connection URL |
+| `spring.datasource.username` | Yes | PostgreSQL username |
+| `spring.datasource.password` | Yes | PostgreSQL password |
+| `spring.data.redis.host` | Yes | Redis host (default: `localhost`) |
+| `spring.data.redis.port` | Yes | Redis port (default: `6379`) |
+| `jwt.secret` | Yes | HS256 signing key (min. 256 bits) |
+| `jwt.expiration-ms` | No | Access token TTL in ms (default: 86400000 = 24h) |
+| `jwt.refresh-expiration-ms` | No | Refresh token TTL in ms (default: 604800000 = 7d) |
+| `google.client-id` | Yes | Google OAuth2 client ID for server-side token verification |
+| `cors.allowed-origins` | No | List of allowed CORS origins |
 
 ---
 
-## API Reference
+## Architecture Notes
 
-All protected endpoints require the header:
-```
-Authorization: Bearer <access_token>
-```
+**Book data** — BookLens does not store book metadata in its own database. All book information (title, author, cover, description, genres, publish year) is fetched live from the [Open Library API](https://openlibrary.org/developers/api) and cached in Redis. Only user-generated data (logs, reviews, lists, follows) is persisted in PostgreSQL.
 
-### Auth
+**Rating storage** — Ratings are stored internally on a 2–10 scale (corresponding to half-star increments) and converted to the 0.5–5.0 scale in API responses.
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/v1/auth/register` | Create account | No |
-| `POST` | `/api/v1/auth/login` | Sign in, receive JWT pair | No |
-| `POST` | `/api/v1/auth/refresh` | Refresh access token | No |
-| `POST` | `/api/v1/auth/google` | Google OAuth2 sign-in | No |
+**Caching** — Spring Cache with Redis is used for book search results (10-minute TTL), book detail pages, and the recommendation pool (60-minute TTL, invalidated on every log action).
 
-### Books
+**Token refresh** — The Axios client intercepts 401 responses, queues in-flight requests, silently calls `/auth/refresh`, and replays queued requests with the new token. If the refresh also fails, all tokens are cleared and the user is redirected to `/login`.
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| `GET` | `/api/v1/books/search?q=` | Search Open Library catalog | No |
-| `GET` | `/api/v1/books/{externalId}` | Book detail | No |
-| `GET` | `/api/v1/books/{externalId}/rating-distribution` | Star rating breakdown | No |
-| `GET` | `/api/v1/books/subjects/{subject}` | Books by subject/genre | No |
+**Recommendation engine** — Uses a hybrid approach: collaborative filtering (weight 0.6) combined with content-based filtering (weight 0.4). Collaborative filtering activates once a user has at least 5 ratings.
 
-### Reading Log
-
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/v1/books/{externalId}/log` | Add or update a log entry | Yes |
-| `DELETE` | `/api/v1/logs/{logId}` | Remove a log entry | Yes |
-| `GET` | `/api/v1/me/diary` | Your full reading diary | Yes |
-| `GET` | `/api/v1/me/feed` | Activity feed from followed users | Yes |
-| `GET` | `/api/v1/me/challenge` | Annual reading challenge progress | Yes |
-
-### Reviews
-
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/v1/books/{externalId}/reviews` | Write a review | Yes |
-| `GET` | `/api/v1/books/{externalId}/reviews` | Reviews for a book | No |
-| `PUT` | `/api/v1/reviews/{reviewId}` | Edit your review | Yes |
-| `DELETE` | `/api/v1/reviews/{reviewId}` | Delete your review | Yes |
-| `POST` | `/api/v1/reviews/{reviewId}/like` | Toggle like on a review | Yes |
-| `GET` | `/api/v1/reviews/popular` | Popular reviews this week | No |
-| `GET` | `/api/v1/users/{userId}/reviews` | Reviews by a specific user | No |
-
-### Users & Recommendations
-
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| `GET` | `/api/v1/users/{username}` | Public profile | No |
-| `PATCH` | `/api/v1/me` | Update your profile | Yes |
-| `POST` | `/api/v1/users/{userId}/follow` | Follow a user | Yes |
-| `DELETE` | `/api/v1/users/{userId}/follow` | Unfollow a user | Yes |
-| `GET` | `/api/v1/me/suggestions` | Suggested users to follow | Yes |
-| `GET` | `/api/v1/me/recommendations` | Personalized book recommendations | Yes |
-
----
-
-## Recommendation Engine
-
-The hybrid engine (`HybridRecommendationEngine.java`) combines two strategies:
-
-### Content-Based Filtering
-Builds a taste profile from books the user has rated **3.5 stars or higher** — extracts favorite genres (by frequency) and favorite authors, then scores unread books that match.
-
-Works from the **very first rating**.
-
-### Collaborative Filtering
-Finds *taste neighbors* — users who also rated the same books highly — then recommends books those neighbors loved that the current user hasn't encountered yet.
-
-Requires at least `min-ratings-for-cf` ratings (default: **5**) to activate.
-
-### Hybrid Score
-
-```
-hybrid_score = (collaborative_weight × CF_score) + (content_weight × CB_score)
-             = (0.6 × CF_score) + (0.4 × CB_score)
-```
-
-Weights are tunable in `application.yml` under the `recommendation:` block.
-
-### Caching
-
-Results are cached per user in Redis with a default TTL of **60 minutes**. The cache is **automatically invalidated** whenever the user logs or rates a book.
-
----
-
-## Authentication Flow
-
-```
-Register / Login
-    ↓
-AuthService issues:
-  • access_token  (JWT, 24h)
-  • refresh_token (JWT, 7d)
-    ↓
-Axios client attaches access_token to every request header
-    ↓
-On 401 → client calls /auth/refresh with refresh_token
-    ↓
-New token pair issued → original request retried
-    ↓
-If refresh also fails → user redirected to /login
-```
-
-Tokens are persisted in `localStorage` via Zustand's `persist` middleware.
-
----
-
-## Deployment
-
-### Backend — Railway / Render
-
-1. Set environment variables in your platform dashboard (never commit secrets)
-2. The built JAR is at `target/booklens-backend-0.0.1-SNAPSHOT.jar` — deployable directly
-3. Add a managed PostgreSQL and Redis instance from your platform
-4. Update `cors.allowed-origins` in `application.yml` to include your frontend URL
-
-### Frontend — Vercel
-
-1. Set `VITE_API_URL` to your deployed backend URL in the Vercel dashboard
-2. Set `VITE_GOOGLE_CLIENT_ID` in the Vercel dashboard
-3. `npm run build` → deploy the `dist/` folder
-
----
-
-## Future Enhancements
-
-- [ ] Role-based access control (Admin / Moderator)
-- [ ] Pagination on all list endpoints
-- [ ] Docker Compose setup (app + postgres + redis)
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Unit and integration test coverage
-- [ ] Reading list sharing (public / private toggle)
-- [ ] Push notifications for follow activity
-
----
-
-## License
-
-This project is open source. Feel free to fork and build on it.
+**CORS** — Configured to allow `localhost:5173–5175` (Vite dev variants) and `https://booklens.vercel.app` (production) out of the box. Add additional origins in `application.yml` under `cors.allowed-origins`.
