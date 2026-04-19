@@ -19,6 +19,7 @@ export default function App() {
         <Route path="/" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
         <Route path="/log" element={<ErrorBoundary><LogBookPage /></ErrorBoundary>} />
         <Route path="/profile" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+        <Route path="/profile/:username" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
         <Route path="/browse" element={<ErrorBoundary><BrowsePage /></ErrorBoundary>} />
         <Route path="/search" element={<ErrorBoundary><SearchPage /></ErrorBoundary>} />
         <Route path="/book/:externalId" element={<ErrorBoundary><BookDetailPage /></ErrorBoundary>} />

@@ -50,17 +50,32 @@
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   margin-bottom: 8px;
+  transition: border-color 0.2s, background 0.2s;
 }
 
-.miniCover {
-  width: 28px;
-  height: 42px;
+.bookMini:hover {
+  border-color: var(--accent-green);
+  background: rgba(0, 200, 117, 0.04);
+}
+
+.miniCoverImg {
+  width: 32px;
+  height: 48px;
+  object-fit: cover;
   border-radius: 3px;
   flex-shrink: 0;
   border: 1px solid var(--border);
 }
 
-.miniInfo { min-width: 0; }
+.miniCover {
+  width: 32px;
+  height: 48px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.miniInfo { min-width: 0; flex: 1; }
 
 .miniTitle {
   font-size: 12px;
@@ -74,6 +89,18 @@
 .miniAuthor {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.miniArrow {
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.bookMini:hover .miniArrow {
+  color: var(--accent-green);
+  transform: translateX(2px);
 }
 
 /* Cover list (multiple books) */

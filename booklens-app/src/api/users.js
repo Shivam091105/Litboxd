@@ -24,4 +24,16 @@ export const usersApi = {
   // Personalised book recommendations
   getRecommendations: () =>
     api.get('/me/recommendations').then(r => r.data),
+
+  // List all users (for Members page)
+  getAllUsers: (page = 0, size = 20, query = '') =>
+    api.get('/users', { params: { page, size, ...(query ? { q: query } : {}) } }).then(r => r.data),
+
+  // Get a user's followers
+  getFollowers: (userId) =>
+    api.get(`/users/${userId}/followers`).then(r => r.data),
+
+  // Get who a user follows
+  getFollowing: (userId) =>
+    api.get(`/users/${userId}/following`).then(r => r.data),
 }

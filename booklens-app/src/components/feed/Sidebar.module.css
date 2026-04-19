@@ -14,6 +14,34 @@
   margin-bottom: 16px;
 }
 
+.widgetTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.widgetTitleRow .widgetTitle {
+  margin-bottom: 0;
+}
+
+.widgetLink {
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-green);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  padding: 0;
+  letter-spacing: 0.2px;
+  transition: opacity 0.15s;
+}
+
+.widgetLink:hover {
+  opacity: 0.8;
+}
+
 /* Reading Challenge */
 .challengeGoal {
   display: flex;
@@ -28,7 +56,10 @@
   font-weight: 700;
 }
 
-.challengeTotal { color: var(--text-muted); font-size: 13px; }
+.challengeTotal {
+  color: var(--text-muted);
+  font-size: 13px;
+}
 
 .progressBar {
   height: 6px;
@@ -46,10 +77,17 @@
   transition: width 1s ease;
 }
 
-.challengeLabel { font-size: 12px; color: var(--text-muted); }
+.challengeLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
 
 /* Genre tags */
-.genreTags { display: flex; flex-wrap: wrap; gap: 6px; }
+.genreTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 
 .genreTag {
   background: var(--bg-elevated);
@@ -63,7 +101,10 @@
   font-family: 'DM Sans', sans-serif;
 }
 
-.genreTag:hover { border-color: rgba(0,200,117,0.3); color: var(--accent-green); }
+.genreTag:hover {
+  border-color: rgba(0, 200, 117, 0.3);
+  color: var(--accent-green);
+}
 
 .genreActive {
   background: var(--accent-green-dim);
@@ -80,7 +121,9 @@
   border-bottom: 1px solid var(--border);
 }
 
-.userRow:last-child { border-bottom: none; }
+.userRow:last-child {
+  border-bottom: none;
+}
 
 .userAvatar {
   width: 32px;
@@ -93,12 +136,24 @@
   font-weight: 700;
   border: 1.5px solid var(--border-light);
   flex-shrink: 0;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.userInfo { flex: 1; min-width: 0; }
-.userName  { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.userBooks { font-size: 11px; color: var(--text-muted); }
+.userInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.userBooks {
+  font-size: 11px;
+  color: var(--text-muted);
+}
 
 .followBtn {
   padding: 4px 12px;
@@ -114,13 +169,26 @@
   white-space: nowrap;
 }
 
-.followBtn:hover { border-color: var(--accent-green); color: var(--accent-green); }
-.following       { border-color: var(--accent-green); color: var(--accent-green); }
+.followBtn:hover {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.following {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
 
 /* Trending lists */
-.listItems { display: flex; flex-direction: column; gap: 12px; }
+.listItems {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-.listItem  { cursor: pointer; }
+.listItem {
+  cursor: pointer;
+}
 
 .listTitle {
   font-size: 13px;
@@ -130,6 +198,11 @@
   transition: color 0.2s;
 }
 
-.listItem:hover .listTitle { color: var(--accent-green); }
+.listItem:hover .listTitle {
+  color: var(--accent-green);
+}
 
-.listMeta { font-size: 11px; color: var(--text-muted); }
+.listMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+}

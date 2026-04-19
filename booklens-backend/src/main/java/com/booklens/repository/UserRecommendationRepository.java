@@ -18,10 +18,7 @@ public interface UserRecommendationRepository extends JpaRepository<UserRecommen
     @Query("SELECT r.externalBookId FROM UserRecommendation r WHERE r.userId = :userId")
     Set<String> findExternalBookIdsByUserId(@Param("userId") Long userId);
 
-    /**
-     * Shift all existing entries down by `shift` positions to make room at the
-     * front
-     */
+    /** Shift all existing entries down by `shift` positions to make room at the front */
     @Modifying
     @Query("UPDATE UserRecommendation r SET r.position = r.position + :shift WHERE r.userId = :userId")
     void shiftPositions(@Param("userId") Long userId, @Param("shift") int shift);
@@ -31,9 +28,7 @@ public interface UserRecommendationRepository extends JpaRepository<UserRecommen
     @Query("DELETE FROM UserRecommendation r WHERE r.userId = :userId AND r.position >= :maxPosition")
     void deleteOverflow(@Param("userId") Long userId, @Param("maxPosition") int maxPosition);
 
-    /**
-     * Delete any existing entry for this book (used before re-inserting at front)
-     */
+    /** Delete any existing entry for this book (used before re-inserting at front) */
     @Modifying
     @Query("DELETE FROM UserRecommendation r WHERE r.userId = :userId AND r.externalBookId = :bookId")
     void deleteByUserIdAndBookId(@Param("userId") Long userId, @Param("bookId") String bookId);

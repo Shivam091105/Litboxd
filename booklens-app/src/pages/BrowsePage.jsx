@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { booksApi } from '../api/books'
 import styles from './BrowsePage.module.css'
 
 const GENRES = [
   { key: 'fiction', label: 'Fiction' },
-  { key: 'science_fiction', label: 'Sci-Fi' },
+  { key: 'science_fiction', label: 'Science Fiction' },
   { key: 'fantasy', label: 'Fantasy' },
   { key: 'mystery', label: 'Mystery' },
   { key: 'romance', label: 'Romance' },
   { key: 'thriller', label: 'Thriller' },
-  { key: 'historical_fiction', label: 'Historical' },
+  { key: 'historical_fiction', label: 'Historical Fiction' },
   { key: 'horror', label: 'Horror' },
   { key: 'biography', label: 'Biography' },
   { key: 'philosophy', label: 'Philosophy' },
@@ -21,87 +21,59 @@ const GENRES = [
   { key: 'adventure', label: 'Adventure' },
   { key: 'classics', label: 'Classics' },
   { key: 'young_adult', label: 'Young Adult' },
-  { key: 'literary_fiction', label: 'Literary Fiction' },
-  { key: 'non_fiction', label: 'Non-Fiction' },
 ]
 
-// Map friendly sidebar labels → genre keys
-const LABEL_TO_KEY = {
-  'literary fiction': 'literary_fiction',
-  'science fiction': 'science_fiction',
-  'non-fiction': 'non_fiction',
-  'historical': 'historical_fiction',
-  'young adult': 'young_adult',
-}
-
-function colorIndex(str) {
-  if (!str) return 1
-  let h = 0
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
-  return (h % 8) + 1
-}
-
 export default function BrowsePage() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedGenre, setSelectedGenre] = useState(null)
   const navigate = useNavigate()
-
-  // Read ?genre= from URL, normalise to a GENRES key
-  const rawGenreParam = searchParams.get('genre')
-  const genreParam = rawGenreParam
-    ? (LABEL_TO_KEY[rawGenreParam.toLowerCase()] ?? rawGenreParam.toLowerCase().replace(/\s+/g, '_'))
-    : null
-  const initialGenre = genreParam && GENRES.find(g => g.key === genreParam) ? genreParam : null
-
-  const [selectedGenre, setSelectedGenre] = useState(initialGenre)
-
-  // Keep state in sync when URL changes (e.g. browser back)
-  useEffect(() => {
-    const raw = searchParams.get('genre')
-    if (!raw) { setSelectedGenre(null); return }
-    const key = LABEL_TO_KEY[raw.toLowerCase()] ?? raw.toLowerCase().replace(/\s+/g, '_')
-    setSelectedGenre(GENRES.find(g => g.key === key) ? key : null)
-  }, [searchParams])
-
-  function selectGenre(key) {
-    setSelectedGenre(key)
-    if (key) setSearchParams({ genre: key })
-    else setSearchParams({})
-  }
-
-  const active = GENRES.find(g => g.key === selectedGenre)
 
   return (
     <div className={styles.wrap}>
-      <header className={styles.pageHeader}>
-        <p className={styles.eyebrow}>Discover</p>
+      {/* Page header */}
+      <div className={`${styles.pageHeader} fade-up`}>
+        <div className={styles.pageLabel}>
+          <span className={styles.labelDot} />
+          Discover
+        </div>
         <h1 className={styles.pageTitle}>Browse books</h1>
-        <p className={styles.pageSub}>Explore curated lists by genre. Click any category to dive in.</p>
-      </header>
+        <p className={styles.pageSub}>
+          Explore books by genre. Click any category to dive deeper.
+        </p>
+      </div>
 
-      <nav className={styles.filterBar}>
-        <button
-          className={`${styles.filterBtn} ${!selectedGenre ? styles.filterBtnActive : ''}`}
-          onClick={() => selectGenre(null)}
-        >
-          All genres
-        </button>
+      {/* Genre pills */}
+      <div className={`${styles.genrePills} fade-up`}>
         {GENRES.map(g => (
           <button
             key={g.key}
-            className={`${styles.filterBtn} ${selectedGenre === g.key ? styles.filterBtnActive : ''}`}
-            onClick={() => selectGenre(selectedGenre === g.key ? null : g.key)}
+            className={`${styles.genrePill} ${selectedGenre === g.key ? styles.genrePillActive : ''}`}
+            onClick={() => setSelectedGenre(selectedGenre === g.key ? null : g.key)}
           >
+            <span className={styles.genreEmoji}>{g.emoji}</span>
             {g.label}
           </button>
         ))}
-      </nav>
+      </div>
 
-      {active ? (
-        <GenreGrid genre={active} navigate={navigate} />
-      ) : (
+      {/* Selected genre: full view */}
+      {selectedGenre && (
+        <GenreSection
+          genre={GENRES.find(g => g.key === selectedGenre)}
+          limit={50}
+          navigate={navigate}
+        />
+      )}
+
+      {/* Default: show rows for all genres */}
+      {!selectedGenre && (
         <div className={styles.genreRows}>
           {GENRES.slice(0, 8).map(g => (
-            <GenreRow key={g.key} genre={g} onSeeAll={() => selectGenre(g.key)} navigate={navigate} />
+            <GenreRow
+              key={g.key}
+              genre={g}
+              onSeeAll={() => setSelectedGenre(g.key)}
+              navigate={navigate}
+            />
           ))}
         </div>
       )}
@@ -112,108 +84,115 @@ export default function BrowsePage() {
 function GenreRow({ genre, onSeeAll, navigate }) {
   const { data, isLoading } = useQuery({
     queryKey: ['books', 'subject', genre.key],
-    queryFn: () => booksApi.browseBySubject(genre.key, 14),
+    queryFn: () => booksApi.browseBySubject(genre.key, 30),
     staleTime: 10 * 60 * 1000,
   })
+
   const books = data?.books ?? []
 
   return (
-    <section className={styles.genreRow}>
+    <div className={styles.genreRow}>
       <div className={styles.rowHeader}>
-        <h2 className={styles.rowTitle}>{genre.label}</h2>
-        <button className={styles.seeAllBtn} onClick={onSeeAll}>
-          See all
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6h8M6.5 2.5L10 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <h2 className={styles.rowTitle}>
+          <span className={styles.genreEmoji}>{genre.emoji}</span>
+          {genre.label}
+          {data?.totalResults > 0 && (
+            <span className={styles.rowCount}>{data.totalResults.toLocaleString()}</span>
+          )}
+        </h2>
+        <button className={styles.seeAll} onClick={onSeeAll}>See all →</button>
       </div>
       <div className={styles.rowScroll}>
         {isLoading
-          ? Array.from({ length: 10 }).map((_, i) => <BookSkeleton key={i} />)
-          : books.map(book => <BookCard key={book.externalId} book={book} navigate={navigate} />)
+          ? Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className={styles.bookSkeleton}>
+              <div className={styles.coverSkeleton} />
+              <div className={styles.titleSkeleton} />
+              <div className={styles.authorSkeleton} />
+            </div>
+          ))
+          : books.map(book => (
+            <BookCard key={book.externalId} book={book} navigate={navigate} />
+          ))
         }
       </div>
-    </section>
+    </div>
   )
 }
 
-function GenreGrid({ genre, navigate }) {
+function GenreSection({ genre, limit, navigate }) {
   const { data, isLoading } = useQuery({
-    queryKey: ['books', 'subject', genre.key, 40],
-    queryFn: () => booksApi.browseBySubject(genre.key, 40),
+    queryKey: ['books', 'subject', genre.key, limit],
+    queryFn: () => booksApi.browseBySubject(genre.key, limit),
     staleTime: 10 * 60 * 1000,
   })
+
   const books = data?.books ?? []
 
   return (
-    <section className={styles.genreGrid}>
-      <div className={styles.genreGridHeader}>
-        <h2 className={styles.genreGridTitle}>{genre.label}</h2>
+    <div className={`${styles.genreSection} fade-up`}>
+      <h2 className={styles.sectionTitle}>
+        <span className={styles.genreEmoji}>{genre.emoji}</span>
+        {genre.label}
         {data?.totalResults > 0 && (
-          <span className={styles.totalBadge}>{data.totalResults.toLocaleString()} books</span>
+          <span className={styles.totalCount}>
+            {data.totalResults.toLocaleString()} books
+          </span>
         )}
-      </div>
+      </h2>
       <div className={styles.booksGrid}>
         {isLoading
-          ? Array.from({ length: 20 }).map((_, i) => <BookSkeleton key={i} />)
-          : books.length > 0
-            ? books.map(book => <BookCard key={book.externalId} book={book} navigate={navigate} />)
-            : <p className={styles.empty}>No books found for this genre.</p>
+          ? Array.from({ length: 20 }).map((_, i) => (
+            <div key={i} className={styles.bookSkeleton}>
+              <div className={styles.coverSkeleton} />
+              <div className={styles.titleSkeleton} />
+              <div className={styles.authorSkeleton} />
+            </div>
+          ))
+          : books.map(book => (
+            <BookCard key={book.externalId} book={book} navigate={navigate} />
+          ))
         }
       </div>
-    </section>
+    </div>
   )
 }
 
 function BookCard({ book, navigate }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const coverSrc = book.coverUrlSmall || book.coverUrl
-  const showImg = !!coverSrc && !imgFailed
-  const ci = colorIndex(book.externalId)
+  const colorIdx = ((book.externalId?.charCodeAt(2) ?? 1) % 8) + 1
 
   return (
-    <article
+    <div
       className={styles.bookCard}
       onClick={() => navigate(`/book/${book.externalId}`)}
+      title={book.title}
     >
       <div className={styles.coverWrap}>
-        {showImg ? (
+        {book.coverUrl && !imgFailed ? (
           <img
-            src={coverSrc}
+            src={book.coverUrlSmall || book.coverUrl}
             alt={book.title}
-            className={styles.coverImg}
+            className={styles.bookCover}
             loading="lazy"
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <div className={`${styles.coverFallback} bc${ci}`}>
-            <span className={styles.fallbackInitial}>{book.title?.charAt(0) ?? '?'}</span>
+          <div className={`${styles.bookCoverFallback} bc${colorIdx}`}>
+            <span>{book.title?.charAt(0) ?? '?'}</span>
           </div>
         )}
-        <div className={styles.coverSheen} />
+        {/* Hover overlay */}
+        <div className={styles.coverOverlay}>
+          <span className={styles.viewBtn}>View →</span>
+        </div>
       </div>
-      <div className={styles.cardMeta}>
-        <p className={styles.cardTitle}>{book.title}</p>
-        {book.author && <p className={styles.cardAuthor}>{book.author}</p>}
-        {book.averageRating > 0 && (
-          <p className={styles.cardRating}>
-            <span className={styles.star}>★</span>
-            {book.averageRating.toFixed(1)}
-          </p>
+      <div className={styles.bookMeta}>
+        <div className={styles.bookTitle}>{book.title}</div>
+        <div className={styles.bookAuthor}>{book.author}</div>
+        {book.publishYear && (
+          <div className={styles.bookYear}>{book.publishYear}</div>
         )}
-      </div>
-    </article>
-  )
-}
-
-function BookSkeleton() {
-  return (
-    <div className={styles.bookCard}>
-      <div className={`${styles.coverWrap} ${styles.skeletonCover}`} />
-      <div className={styles.cardMeta}>
-        <div className={`${styles.skeletonLine} ${styles.skeletonTitle}`} />
-        <div className={`${styles.skeletonLine} ${styles.skeletonAuthor}`} />
       </div>
     </div>
   )

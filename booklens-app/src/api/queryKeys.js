@@ -16,8 +16,11 @@ export const keys = {
     challenge:  (year)    => ['challenge', year],
   },
   users: {
+    all:        (page, q) => ['users', 'all', page, q ?? ''],
     profile:    (username) => ['users', username],
     suggestions: ['users', 'suggestions'],
+    followers:  (userId)  => ['users', userId, 'followers'],
+    following:  (userId)  => ['users', userId, 'following'],
   },
   recommendations: ['recommendations'],
 }

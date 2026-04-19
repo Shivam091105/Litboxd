@@ -127,6 +127,18 @@
   box-shadow: var(--shadow-green);
 }
 
+.btnFollowing {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.btnFollowing:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  background: rgba(232, 64, 87, 0.08);
+}
+
 /* ── TAB BAR ── */
 .tabBar {
   background: var(--bg-secondary);

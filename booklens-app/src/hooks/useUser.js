@@ -43,11 +43,7 @@ export function useRecommendations() {
     queryKey: keys.recommendations,
     queryFn:  () => usersApi.getRecommendations(),
     enabled:  isAuthenticated,
-    // staleTime: 0 so React Query always treats this as stale and will
-    // refetch whenever useLogBook calls invalidateQueries({ refetchType: 'all' }).
-    // The heavy lifting (actual computation) is cached on the backend in Redis
-    // and evicted on every log action, so the API round-trip is cheap.
-    staleTime: 0,
+    staleTime: 60 * 60 * 1000,  // 1 hour — matches Redis TTL on backend
   })
 }
 
@@ -72,6 +68,34 @@ export function useSuggestions(limit = 4) {
   })
 }
 
+// ── All users (for Members page) ──────────────────────────────────────────────
+export function useAllUsers(page = 0, size = 20, query = '') {
+  return useQuery({
+    queryKey: keys.users.all(page, query),
+    queryFn:  () => usersApi.getAllUsers(page, size, query),
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+// ── Followers / Following lists ───────────────────────────────────────────────
+export function useFollowers(userId) {
+  return useQuery({
+    queryKey: keys.users.followers(userId),
+    queryFn:  () => usersApi.getFollowers(userId),
+    enabled:  !!userId,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+export function useFollowing(userId) {
+  return useQuery({
+    queryKey: keys.users.following(userId),
+    queryFn:  () => usersApi.getFollowing(userId),
+    enabled:  !!userId,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
 // ── Follow / Unfollow (mutation) ──────────────────────────────────────────────
 export function useFollowUser() {
   const queryClient = useQueryClient()
@@ -79,9 +103,15 @@ export function useFollowUser() {
   return useMutation({
     mutationFn: ({ userId, isFollowing }) =>
       isFollowing ? usersApi.unfollow(userId) : usersApi.follow(userId),
-    onSuccess: (_, { username }) => {
+    onSuccess: (_, { username, userId }) => {
       queryClient.invalidateQueries({ queryKey: keys.users.profile(username) })
       queryClient.invalidateQueries({ queryKey: keys.users.suggestions })
+      // Also invalidate the member list and follower counts
+      queryClient.invalidateQueries({ queryKey: ['users', 'all'] })
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: keys.users.followers(userId) })
+        queryClient.invalidateQueries({ queryKey: keys.users.following(userId) })
+      }
     },
   })
 }

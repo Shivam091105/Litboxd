@@ -299,11 +299,34 @@
   padding-top: 56px;
 }
 
-/* Books grid */
+/* Books row — single horizontal scroll */
 .booksGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
-  gap: 20px;
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  mask-image: linear-gradient(90deg, #000 0%, #000 96%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 96%, transparent 100%);
+}
+.booksGrid::-webkit-scrollbar {
+  height: 4px;
+}
+.booksGrid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.booksGrid::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Lock each card to a fixed width so they don't stretch */
+.booksGrid > * {
+  min-width: 140px;
+  max-width: 140px;
+  flex-shrink: 0;
 }
 
 /* Feed + sidebar */
@@ -443,8 +466,11 @@
   }
 
   .booksGrid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 14px;
+    gap: 12px;
+  }
+  .booksGrid > * {
+    min-width: 110px;
+    max-width: 110px;
   }
 
   .recScroll {

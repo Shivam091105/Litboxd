@@ -10,28 +10,32 @@ import java.time.LocalDateTime;
  * UserRecommendation — one slot in a user's persistent recommendation pool.
  *
  * The pool works like a ranked list:
- * - position 0 = most recently added / most relevant
- * - higher positions = older, less fresh
- * - pool is capped at POOL_MAX (15) items per user
+ *   - position 0 = most recently added / most relevant
+ *   - higher positions = older, less fresh
+ *   - pool is capped at POOL_MAX (15) items per user
  *
  * On every new log/rating signal:
- * - fresh candidates are inserted at position 0..N-1
- * - existing entries are shifted down by N
- * - anything beyond POOL_MAX is deleted
+ *   - fresh candidates are inserted at position 0..N-1
+ *   - existing entries are shifted down by N
+ *   - anything beyond POOL_MAX is deleted
  *
  * This gives the Netflix-style behaviour: new signals surface to the top,
  * old recommendations drift to the back and eventually age off, but they
  * don't simply vanish on the next request.
  */
 @Entity
-@Table(name = "user_recommendations", uniqueConstraints = @UniqueConstraint(name = "uc_user_rec_book", columnNames = {
-        "user_id", "external_book_id" }), indexes = {
+@Table(
+        name = "user_recommendations",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uc_user_rec_book",
+                columnNames = {"user_id", "external_book_id"}
+        ),
+        indexes = {
                 @Index(name = "idx_rec_user_pos", columnList = "user_id, position")
-        })
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+        }
+)
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
 @Builder
 public class UserRecommendation {
 

@@ -60,7 +60,7 @@ open-library:
 
 # ── Google OAuth2 ────────────────────────────────────────────────────────────
 google:
-  client-id: YOUR_GOOGLE_CLIENT_ID_HERE   # from console.cloud.google.com
+  client-id: 1082269421859-89k9fofusdm2esu0feqe91kuhss479rg.apps.googleusercontent.com  # from console.cloud.google.com
 
 # ── Recommendation Engine ────────────────────────────────────────────────────
 recommendation:

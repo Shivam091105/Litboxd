@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReviewCard from '../components/book/ReviewCard'
 import { StatusPill } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
-import { useProfile, useDiary, useChallenge, useUpdateProfile } from '../hooks/useUser'
+import { useProfile, useDiary, useChallenge, useUpdateProfile, useFollowUser, useFollowers, useFollowing } from '../hooks/useUser'
 import { useUserReviews } from '../hooks/useReviews'
 import { listsApi } from '../api/lists'
 import useAuthStore from '../store/authStore'
@@ -54,16 +54,19 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('Overview')
   const [showEdit, setShowEdit] = useState(false)
   const [showFavEdit, setShowFavEdit] = useState(false)
-  const { user, isAuthenticated } = useAuthStore()
+  const { user: me, isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
-  const username = user?.username
+  const params = useParams()
 
-  const { data: profile, isLoading: profileLoading } = useProfile(username)
-  const { data: diaryData, isLoading: diaryLoading } = useDiary(null, 50)
-  const { data: reviewsData, isLoading: reviewsLoading } = useUserReviews(user?.id)
-  const { data: challenge } = useChallenge()
+  // Determine whose profile to show:
+  // - /profile/:username → show that user's profile (public view)
+  // - /profile → show own profile (requires auth)
+  const routeUsername = params.username
+  const isOwnProfile = !routeUsername || (me && routeUsername === me.username)
+  const profileUsername = routeUsername || me?.username
 
-  if (!isAuthenticated) {
+  // If no username (unauthenticated visiting /profile), show login prompt
+  if (!profileUsername) {
     return (
       <div style={{ maxWidth: 480, margin: '80px auto', padding: '0 40px', textAlign: 'center' }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700, marginBottom: 12 }}>
@@ -80,11 +83,41 @@ export default function ProfilePage() {
     )
   }
 
-  const diaryItems = Array.isArray(diaryData) ? diaryData : diaryData?.content ?? []
+  const { data: profile, isLoading: profileLoading } = useProfile(profileUsername)
+
+  // Only load diary/reviews/challenge for own profile (requires auth)
+  const { data: diaryData, isLoading: diaryLoading } = useDiary(null, 50)
+  const { data: reviewsData, isLoading: reviewsLoading } = useUserReviews(
+    isOwnProfile ? me?.id : profile?.id
+  )
+  const { data: challenge } = useChallenge()
+
+  const diaryItems = isOwnProfile
+    ? (Array.isArray(diaryData) ? diaryData : diaryData?.content ?? [])
+    : []
   const reviewItems = Array.isArray(reviewsData) ? reviewsData : reviewsData?.content ?? []
+
   const initials = profile?.displayName
-    ? profile.displayName.slice(0, 2).toUpperCase()
-    : username?.slice(0, 2).toUpperCase() ?? 'BL'
+    ? profile.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : profileUsername?.slice(0, 2).toUpperCase() ?? 'BL'
+
+  // Follow state
+  const followMutation = useFollowUser()
+  const [optimisticFollowing, setOptimisticFollowing] = useState(null) // null = use server
+
+  const isFollowing = optimisticFollowing !== null
+    ? optimisticFollowing
+    : profile?.isFollowedByViewer ?? false
+
+  function handleFollowToggle() {
+    const next = !isFollowing
+    setOptimisticFollowing(next)
+    followMutation.mutate({
+      userId: profile?.id,
+      isFollowing: isFollowing,
+      username: profileUsername,
+    })
+  }
 
   return (
     <div>
@@ -100,18 +133,37 @@ export default function ProfilePage() {
               </>
             ) : (
               <>
-                <div className={styles.name}>{profile?.displayName || username}</div>
-                <div className={styles.handle}>@{profile?.username || username}</div>
+                <div className={styles.name}>{profile?.displayName || profileUsername}</div>
+                <div className={styles.handle}>@{profile?.username || profileUsername}</div>
                 {profile?.bio && <div className={styles.bio}>{profile.bio}</div>}
                 {profile?.location && <div className={styles.location}>{profile.location}</div>}
               </>
             )}
           </div>
           <div className={styles.actions}>
-            <button className={styles.btnOutline} type="button" onClick={() => setShowEdit(true)}>
-              Edit profile
-            </button>
-            <Link to="/log" className={styles.btnPrimary}>+ Log book</Link>
+            {isOwnProfile ? (
+              /* Own profile: edit + log book */
+              <>
+                <button className={styles.btnOutline} type="button" onClick={() => setShowEdit(true)}>
+                  Edit profile
+                </button>
+                <Link to="/log" className={styles.btnPrimary}>+ Log book</Link>
+              </>
+            ) : isAuthenticated ? (
+              /* Other user's profile: follow/unfollow */
+              <button
+                className={`${styles.btnOutline} ${isFollowing ? styles.btnFollowing : ''}`}
+                type="button"
+                onClick={handleFollowToggle}
+              >
+                {isFollowing ? '✓ Following' : 'Follow'}
+              </button>
+            ) : (
+              /* Not logged in: prompt to sign in */
+              <button className={styles.btnPrimary} onClick={() => navigate('/login')}>
+                Sign in to follow
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -119,17 +171,26 @@ export default function ProfilePage() {
       {/* Tab bar */}
       <div className={styles.tabBar}>
         <div className={styles.tabBarInner}>
-          {TABS.map(t => (
-            <button key={t} type="button"
-              className={`${styles.tab} ${activeTab === t ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab(t)}
-            >
-              {t}
-              {t === 'Reviews' && reviewItems.length > 0 && (
-                <span className={styles.tabCount}>{reviewItems.length}</span>
-              )}
-            </button>
-          ))}
+          {TABS.map(t => {
+            // Hide Lists tab for other users' profiles (they can't manage lists)
+            if (t === 'Lists' && !isOwnProfile) return null
+            return (
+              <button key={t} type="button"
+                className={`${styles.tab} ${activeTab === t ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab(t)}
+              >
+                {t}
+                {t === 'Reviews' && reviewItems.length > 0 && (
+                  <span className={styles.tabCount}>{reviewItems.length}</span>
+                )}
+                {t === 'Network' && profile && (
+                  <span className={styles.tabCount}>
+                    {(profile.followersCount ?? 0) + (profile.followingCount ?? 0)}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -147,11 +208,11 @@ export default function ProfilePage() {
                   </div>
                 ))
                 : [
-                  ['Books', profile?.booksRead ?? 0, () => setActiveTab('Diary')],
-                  ['Reviews', reviewItems.length, () => setActiveTab('Reviews')],
-                  ['Lists', profile?.listsCount ?? 0, () => setActiveTab('Lists')],
-                  ['Followers', profile?.followersCount ?? 0, null],
-                  ['Following', profile?.followingCount ?? 0, null],
+                  ['Books', profile?.booksRead ?? 0, isOwnProfile ? () => setActiveTab('Diary') : null],
+                  ['Reviews', profile?.reviewsCount ?? reviewItems.length, () => setActiveTab('Reviews')],
+                  ['Lists', profile?.listsCount ?? 0, isOwnProfile ? () => setActiveTab('Lists') : null],
+                  ['Followers', profile?.followersCount ?? 0, () => setActiveTab('Network')],
+                  ['Following', profile?.followingCount ?? 0, () => setActiveTab('Network')],
                 ].map(([label, val, onClick]) => (
                   <div key={label} className={styles.statBox} onClick={onClick || undefined}
                     style={onClick ? { cursor: 'pointer' } : {}}>
@@ -162,60 +223,101 @@ export default function ProfilePage() {
               }
             </div>
 
-            {/* Recent reads */}
-            <div className={styles.subHeader}>
-              <h3 className={styles.subTitle}>Recent reads</h3>
-              <button className={styles.subLink} onClick={() => setActiveTab('Diary')}>View diary</button>
-            </div>
-            <div className={styles.recentCovers}>
-              {diaryLoading
-                ? Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} width="60px" height="90px" borderRadius="6px" />)
-                : diaryItems.slice(0, 7).map(log => (
-                  log.bookCoverUrl ? (
-                    <img key={log.id} src={log.bookCoverUrl} alt={log.bookTitle}
-                      className={styles.rCover}
-                      onClick={() => navigate(`/book/${log.bookExternalId}`)}
-                      onError={e => { e.target.style.display = 'none' }} />
-                  ) : (
-                    <div key={log.id}
-                      className={`${styles.rCover} bc${colorIndex(log.bookExternalId)}`}
-                      title={log.bookTitle}
-                      onClick={() => navigate(`/book/${log.bookExternalId}`)} />
-                  )
-                ))
-              }
-              {!diaryLoading && diaryItems.length === 0 && (
-                <p className={styles.emptyInline}>
-                  No books logged yet. <Link to="/browse" style={{ color: 'var(--accent-green)' }}>Browse books</Link>
-                </p>
-              )}
-            </div>
-            <br></br>
-
-            {/* Reading challenge */}
-            <div className={styles.subHeader}>
-              <h3 className={styles.subTitle}>Reading challenge</h3>
-            </div>
-            {challenge && (
-              <div className={styles.challengeBox}>
-                <div className={styles.challengeTop}>
-                  <div>
-                    <span className={styles.challengeNum}>{challenge.booksRead}</span>
-                    <span className={styles.challengeOf}> / {challenge.goal || 36} books</span>
+            {/* Recent reads — only show diary for own profile */}
+            {isOwnProfile && (
+              <>
+                <div className={styles.subHeader}>
+                  <h3 className={styles.subTitle}>Recent reads</h3>
+                  <button className={styles.subLink} onClick={() => setActiveTab('Diary')}>View diary</button>
+                </div>
+                <div className={styles.recentCovers}>
+                  {diaryLoading
+                    ? Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} width="60px" height="90px" borderRadius="6px" />)
+                    : diaryItems.slice(0, 7).map(log => (
+                      log.bookCoverUrl ? (
+                        <img key={log.id} src={log.bookCoverUrl} alt={log.bookTitle}
+                          className={styles.rCover}
+                          onClick={() => navigate(`/book/${log.bookExternalId}`)}
+                          onError={e => { e.target.style.display = 'none' }} />
+                      ) : (
+                        <div key={log.id}
+                          className={`${styles.rCover} bc${colorIndex(log.bookExternalId)}`}
+                          title={log.bookTitle}
+                          onClick={() => navigate(`/book/${log.bookExternalId}`)} />
+                      )
+                    ))
+                  }
+                  {!diaryLoading && diaryItems.length === 0 && (
+                    <p className={styles.emptyInline}>
+                      No books logged yet. <Link to="/browse" style={{ color: 'var(--accent-green)' }}>Browse books</Link>
+                    </p>
+                  )}
+                </div>
+                <br></br>
+                <br></br>
+                {/* Reading challenge */}
+                <div className={styles.subHeader}>
+                  <h3 className={styles.subTitle}>Reading Challenge</h3>
+                </div>
+                {challenge && (
+                  <div className={styles.challengeBox}>
+                    <div className={styles.challengeTop}>
+                      <div>
+                        <span className={styles.challengeNum}>{challenge.booksRead}</span>
+                        <span className={styles.challengeOf}> / {challenge.goal || 36} books</span>
+                      </div>
+                      <span className={styles.challengeYear}>{new Date().getFullYear()} challenge</span>
+                    </div>
+                    <div className={styles.progressBar}>
+                      <div className={styles.progressFill} style={{ width: `${Math.min(100, challenge.percent)}%` }} />
+                    </div>
+                    <div className={styles.challengeLabel}>{challenge.percent}% complete</div>
                   </div>
-                  <span className={styles.challengeYear}>{new Date().getFullYear()} challenge</span>
+                )}
+              </>
+            )}
+
+            {/* Public profile: show member since and about */}
+            {!isOwnProfile && (
+              <div style={{ marginBottom: 32 }}>
+                <div className={styles.subHeader}>
+                  <h3 className={styles.subTitle}>About</h3>
                 </div>
-                <div className={styles.progressBar}>
-                  <div className={styles.progressFill} style={{ width: `${Math.min(100, challenge.percent)}%` }} />
+                <div className={styles.accountInfo}>
+                  {profile?.bio && (
+                    <div className={styles.accountRow}>
+                      <span className={styles.accountLabel}>Bio</span>
+                      <span className={styles.accountValue} style={{ textAlign: 'left', flex: 1 }}>{profile.bio}</span>
+                    </div>
+                  )}
+                  {profile?.location && (
+                    <div className={styles.accountRow}>
+                      <span className={styles.accountLabel}>Location</span>
+                      <span className={styles.accountValue}>{profile.location}</span>
+                    </div>
+                  )}
+                  <div className={styles.accountRow}>
+                    <span className={styles.accountLabel}>Member since</span>
+                    <span className={styles.accountValue}>
+                      {profile?.memberSince
+                        ? new Date(profile.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                        : '—'}
+                    </span>
+                  </div>
+                  <div className={styles.accountRow}>
+                    <span className={styles.accountLabel}>Books read</span>
+                    <span className={styles.accountValue}>{profile?.booksRead ?? 0}</span>
+                  </div>
                 </div>
-                <div className={styles.challengeLabel}>{challenge.percent}% complete</div>
               </div>
             )}
 
-            {/* Recent reviews */}
-            <div className={styles.subHeader} style={{ marginTop: 32 }}>
+            {/* Recent reviews (both own and public) */}
+            <div className={styles.subHeader} style={{ marginTop: isOwnProfile ? 32 : 0 }}>
               <h3 className={styles.subTitle}>Recent reviews</h3>
-              <button className={styles.subLink} onClick={() => setActiveTab('Reviews')}>All reviews</button>
+              {reviewItems.length > 2 && (
+                <button className={styles.subLink} onClick={() => setActiveTab('Reviews')}>All reviews</button>
+              )}
             </div>
             {reviewsLoading ? (
               <Skeleton height="120px" borderRadius="10px" />
@@ -226,25 +328,29 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className={styles.emptyInline}>No reviews yet. Log a book and share your thoughts.</p>
+              <p className={styles.emptyInline}>
+                {isOwnProfile ? 'No reviews yet. Log a book and share your thoughts.' : 'No reviews yet.'}
+              </p>
             )}
           </div>
 
           {/* Sidebar */}
           <div className={styles.sidebar}>
-            <div className={styles.widget}>
-              <div className={styles.widgetHeader}>
-                <div className={styles.widgetTitle}>Favourite books</div>
-                <button className={styles.widgetEdit} onClick={() => setShowFavEdit(true)}>Edit</button>
+            {isOwnProfile && (
+              <div className={styles.widget}>
+                <div className={styles.widgetHeader}>
+                  <div className={styles.widgetTitle}>Favourite books</div>
+                  <button className={styles.widgetEdit} onClick={() => setShowFavEdit(true)}>Edit</button>
+                </div>
+                <FavouriteBooks diaryItems={diaryItems} navigate={navigate} userId={me?.id} />
               </div>
-              <FavouriteBooks diaryItems={diaryItems} navigate={navigate} userId={user?.id} />
-            </div>
+            )}
             <div className={styles.widget}>
               <div className={styles.widgetTitle}>Account</div>
               <div className={styles.accountInfo}>
                 <div className={styles.accountRow}>
                   <span className={styles.accountLabel}>Username</span>
-                  <span className={styles.accountValue}>@{profile?.username || username}</span>
+                  <span className={styles.accountValue}>@{profile?.username || profileUsername}</span>
                 </div>
                 {profile?.location && (
                   <div className={styles.accountRow}>
@@ -260,7 +366,7 @@ export default function ProfilePage() {
                       : '—'}
                   </span>
                 </div>
-                {profile?.readingGoal && (
+                {isOwnProfile && profile?.readingGoal && (
                   <div className={styles.accountRow}>
                     <span className={styles.accountLabel}>Goal</span>
                     <span className={styles.accountValue}>{profile.readingGoal} books / year</span>
@@ -279,7 +385,9 @@ export default function ProfilePage() {
             <h3 className={styles.subTitle}>Reading diary</h3>
             <span className={styles.subMeta}>{diaryItems.length} entries</span>
           </div>
-          {diaryLoading ? (
+          {!isOwnProfile ? (
+            <p className={styles.emptyInline}>Diary is only visible to the profile owner.</p>
+          ) : diaryLoading ? (
             <div className={styles.diaryList}>
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className={styles.diaryItem}>
@@ -343,27 +451,37 @@ export default function ProfilePage() {
           ) : (
             <div className={styles.emptyTab}>
               <div className={styles.emptyTitle}>No reviews yet</div>
-              <div className={styles.emptyDesc}>When you write a review on a book page, it will appear here.</div>
+              <div className={styles.emptyDesc}>
+                {isOwnProfile
+                  ? 'When you write a review on a book page, it will appear here.'
+                  : `${profile?.displayName || profileUsername} hasn't written any reviews yet.`}
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ── LISTS TAB ── */}
-      {activeTab === 'Lists' && (
-        <ListsTab userId={user?.id} diaryItems={diaryItems} navigate={navigate} />
+      {/* ── LISTS TAB (own profile only) ── */}
+      {activeTab === 'Lists' && isOwnProfile && (
+        <ListsTab userId={me?.id} diaryItems={diaryItems} navigate={navigate} />
       )}
 
       {/* ── NETWORK TAB ── */}
       {activeTab === 'Network' && (
-        <NetworkTab profile={profile} profileLoading={profileLoading} />
+        <NetworkTab
+          profile={profile}
+          profileLoading={profileLoading}
+          isOwnProfile={isOwnProfile}
+          isAuthenticated={isAuthenticated}
+          meId={me?.id}
+        />
       )}
 
-      {showEdit && (
-        <EditProfileModal profile={profile} username={username} onClose={() => setShowEdit(false)} />
+      {showEdit && isOwnProfile && (
+        <EditProfileModal profile={profile} username={profileUsername} onClose={() => setShowEdit(false)} />
       )}
-      {showFavEdit && (
-        <EditFavouritesModal diaryItems={diaryItems} userId={user?.id} onClose={() => setShowFavEdit(false)} />
+      {showFavEdit && isOwnProfile && (
+        <EditFavouritesModal diaryItems={diaryItems} userId={me?.id} onClose={() => setShowFavEdit(false)} />
       )}
     </div>
   )
@@ -376,13 +494,12 @@ function ListsTab({ userId, diaryItems, navigate }) {
   const [newListName, setNewListName] = useState('')
   const [newListDesc, setNewListDesc] = useState('')
   const [createError, setCreateError] = useState('')
-  const [activeList, setActiveList] = useState(null)  // { id, title, isDefault }
-  const [editingList, setEditingList] = useState(null) // { id, title, description }
+  const [activeList, setActiveList] = useState(null)
+  const [editingList, setEditingList] = useState(null)
 
   const { data: lists = [], isLoading } = useQuery({
     queryKey: ['lists', userId],
     queryFn: async () => {
-      // Ensure defaults exist on first load
       return await listsApi.ensureDefaults()
     },
     enabled: !!userId,
@@ -426,7 +543,6 @@ function ListsTab({ userId, diaryItems, navigate }) {
 
   const currentList = activeList ? lists.find(l => l.id === activeList.id) : null
 
-  // Books in current list — cross-reference with diary items for cover/title data
   const listBooks = currentList
     ? currentList.externalBookIds.map(eid => {
       const log = diaryItems.find(d => d.bookExternalId === eid)
@@ -439,7 +555,6 @@ function ListsTab({ userId, diaryItems, navigate }) {
 
   return (
     <div className={styles.tabContent}>
-      {/* Header */}
       <div className={styles.subHeader}>
         <h3 className={styles.subTitle}>
           {activeList ? currentList?.title || activeList.title : 'My lists'}
@@ -458,7 +573,6 @@ function ListsTab({ userId, diaryItems, navigate }) {
         </div>
       </div>
 
-      {/* Create new list form */}
       {showCreate && !activeList && (
         <div className={styles.createListForm}>
           <input
@@ -491,7 +605,6 @@ function ListsTab({ userId, diaryItems, navigate }) {
         </div>
       )}
 
-      {/* Lists grid */}
       {!activeList && (
         isLoading ? (
           <div className={styles.listsGrid}>
@@ -509,7 +622,6 @@ function ListsTab({ userId, diaryItems, navigate }) {
                 <div className={styles.listCardMeta}>
                   {list.bookCount} {list.bookCount === 1 ? 'book' : 'books'}
                 </div>
-                {/* Mini covers preview */}
                 {list.externalBookIds?.length > 0 && (
                   <div className={styles.listMiniCovers}>
                     {list.externalBookIds.slice(0, 5).map(eid => {
@@ -530,10 +642,8 @@ function ListsTab({ userId, diaryItems, navigate }) {
         )
       )}
 
-      {/* Single list view */}
       {activeList && currentList && (
         <div>
-          {/* List actions */}
           {!currentList.isDefault && (
             <div className={styles.listActions}>
               {editingList ? (
@@ -581,7 +691,6 @@ function ListsTab({ userId, diaryItems, navigate }) {
             </div>
           )}
 
-          {/* Add books from diary */}
           {diaryItems.length > 0 && (
             <div className={styles.addBooksSection}>
               <div className={styles.addBooksLabel}>Add books from your diary</div>
@@ -611,7 +720,6 @@ function ListsTab({ userId, diaryItems, navigate }) {
             </div>
           )}
 
-          {/* Books in list */}
           {listBooks.length > 0 ? (
             <div className={styles.listBookGrid}>
               {listBooks.map(book => (
@@ -652,31 +760,25 @@ function ListsTab({ userId, diaryItems, navigate }) {
   )
 }
 
-/* ── Network Tab ─────────────────────────────────────────────────────────── */
-const NETWORK_SEED = [
-  { username: 'priya_reads', displayName: 'Priya Sharma', booksRead: 284, color: 'linear-gradient(135deg,#1c5e3a,#0d2e1a)' },
-  { username: 'maya_liu', displayName: 'Maya Liu', booksRead: 431, color: 'linear-gradient(135deg,#5e1c3a,#2e0a1f)' },
-  { username: 'literaryleo', displayName: 'Leonardo Rossi', booksRead: 356, color: 'linear-gradient(135deg,#3a3a1c,#1f1f0a)' },
-  { username: 'bookish_dan', displayName: 'Dan Okafor', booksRead: 197, color: 'linear-gradient(135deg,#1c3a5e,#0a1f3a)' },
-  { username: 'readingwren', displayName: 'Wren Nakamura', booksRead: 163, color: 'linear-gradient(135deg,#2d1b4e,#180f2e)' },
-  { username: 'jorge_b', displayName: 'Jorge Beltrán', booksRead: 847, color: 'linear-gradient(135deg,#5e1c1c,#2e0a0a)' },
-]
-
-function NetworkTab({ profile, profileLoading }) {
+/* ── Network Tab (real API data) ─────────────────────────────────────────── */
+function NetworkTab({ profile, profileLoading, isOwnProfile, isAuthenticated, meId }) {
   const navigate = useNavigate()
-  const [networkTab, setNetworkTab] = useState('following')
-  const [following, setFollowing] = useState(new Set(['priya_reads', 'maya_liu', 'literaryleo']))
+  const [networkTab, setNetworkTab] = useState('followers')
+  const followMutation = useFollowUser()
 
-  const followingList = NETWORK_SEED.filter(u => following.has(u.username))
-  const followerList = NETWORK_SEED.slice(0, 4)
+  const userId = profile?.id
+  const { data: followers = [], isLoading: loadingFollowers } = useFollowers(userId)
+  const { data: following = [], isLoading: loadingFollowing } = useFollowing(userId)
 
-  const displayed = networkTab === 'following' ? followingList : followerList
+  const displayed = networkTab === 'following' ? following : followers
+  const isLoading = networkTab === 'following' ? loadingFollowing : loadingFollowers
 
-  function toggleFollow(username) {
-    setFollowing(prev => {
-      const next = new Set(prev)
-      next.has(username) ? next.delete(username) : next.add(username)
-      return next
+  function handleFollow(u) {
+    if (!isAuthenticated) return navigate('/login')
+    followMutation.mutate({
+      userId: u.id,
+      isFollowing: u.isFollowedByViewer,
+      username: u.username,
     })
   }
 
@@ -684,7 +786,10 @@ function NetworkTab({ profile, profileLoading }) {
     <div className={styles.tabContent}>
       {/* Sub-tabs */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
-        {[['following', `Following (${followingList.length})`], ['followers', `Followers (${followerList.length})`]].map(([key, label]) => (
+        {[
+          ['followers', `Followers (${profile?.followersCount ?? followers.length})`],
+          ['following', `Following (${profile?.followingCount ?? following.length})`],
+        ].map(([key, label]) => (
           <button
             key={key}
             className={`${styles.tab} ${networkTab === key ? styles.tabActive : ''}`}
@@ -696,7 +801,19 @@ function NetworkTab({ profile, profileLoading }) {
         ))}
       </div>
 
-      {displayed.length === 0 ? (
+      {isLoading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
+              <Skeleton width="44px" height="44px" borderRadius="50%" />
+              <div style={{ flex: 1 }}>
+                <Skeleton height="14px" width="140px" style={{ marginBottom: 6 }} />
+                <Skeleton height="12px" width="100px" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : displayed.length === 0 ? (
         <div className={styles.emptyTab}>
           <div className={styles.emptyTitle}>
             {networkTab === 'following' ? 'Not following anyone yet' : 'No followers yet'}
@@ -718,34 +835,37 @@ function NetworkTab({ profile, profileLoading }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
           {displayed.map((u, i) => {
-            const initials = u.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-            const isFollowing = following.has(u.username)
+            const initials = (u.displayName || u.username || '??').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+            const isSelf = meId && String(meId) === String(u.id)
+            const gradient = avatarGradient(u.username)
             return (
-              <div key={u.username} style={{
+              <div key={u.id || u.username} style={{
                 display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
                 borderBottom: i < displayed.length - 1 ? '1px solid var(--border)' : 'none',
               }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: u.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.85)', flexShrink: 0 }}>
                   {initials}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{u.displayName}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>@{u.username} · {u.booksRead} books</div>
+                <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => navigate(`/profile/${u.username}`)}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{u.displayName || u.username}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>@{u.username} · {u.booksRead ?? 0} books</div>
                 </div>
+                {!isSelf && isAuthenticated && (
+                  <button
+                    onClick={() => handleFollow(u)}
+                    style={{
+                      padding: '6px 16px', border: `1px solid ${u.isFollowedByViewer ? 'var(--accent-green)' : 'var(--border-light)'}`,
+                      background: u.isFollowedByViewer ? 'var(--accent-green-dim)' : 'transparent',
+                      color: u.isFollowedByViewer ? 'var(--accent-green)' : 'var(--text-secondary)',
+                      borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
+                    }}
+                  >
+                    {u.isFollowedByViewer ? 'Following' : 'Follow'}
+                  </button>
+                )}
                 <button
-                  onClick={() => toggleFollow(u.username)}
-                  style={{
-                    padding: '6px 16px', border: `1px solid ${isFollowing ? 'var(--accent-green)' : 'var(--border-light)'}`,
-                    background: isFollowing ? 'var(--accent-green-dim)' : 'transparent',
-                    color: isFollowing ? 'var(--accent-green)' : 'var(--text-secondary)',
-                    borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
-                  }}
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
-                <button
-                  onClick={() => navigate('/members')}
+                  onClick={() => navigate(`/profile/${u.username}`)}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, transition: 'color 0.2s' }}
                   title="View profile"
                 >
@@ -772,6 +892,21 @@ function NetworkTab({ profile, profileLoading }) {
       </div>
     </div>
   )
+}
+
+/* Helper for avatar gradients */
+function avatarGradient(username) {
+  const gradients = [
+    'linear-gradient(135deg,#1c5e3a,#0d2e1a)',
+    'linear-gradient(135deg,#1c3a5e,#0a1f3a)',
+    'linear-gradient(135deg,#5e1c3a,#2e0a1f)',
+    'linear-gradient(135deg,#3a3a1c,#1f1f0a)',
+    'linear-gradient(135deg,#2d1b4e,#180f2e)',
+    'linear-gradient(135deg,#4e2d1b,#2e180f)',
+  ]
+  let h = 0
+  for (let i = 0; i < (username?.length || 0); i++) h = (h * 31 + username.charCodeAt(i)) >>> 0
+  return gradients[h % gradients.length]
 }
 
 /* ── FavouriteBooks widget ───────────────────────────────────────────────── */

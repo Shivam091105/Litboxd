@@ -19,42 +19,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleBookLensException(BookLensException ex) {
         log.warn("Business exception: {}", ex.getMessage());
         return ResponseEntity
-                .status(ex.getStatus())
-                .body(errorBody(ex.getStatus(), ex.getMessage()));
-    }
-
-    // ── External API (WebClient) errors ───────────────────────────────────
-    @ExceptionHandler(com.booklens.exception.WebClientException.class)
-    public ResponseEntity<Map<String, Object>> handleWebClientException(
-            com.booklens.exception.WebClientException ex) {
-        log.warn("External API error ({}): {}", ex.getStatus(), ex.getMessage());
-        return ResponseEntity
-                .status(ex.getStatus())
-                .body(errorBody(ex.getStatus(), ex.getMessage()));
-    }
-
-    // ── Spring WebFlux response errors (raw, uncaught) ────────────────────
-    @ExceptionHandler(org.springframework.web.reactive.function.client.WebClientResponseException.class)
-    public ResponseEntity<Map<String, Object>> handleWebClientResponseException(
-            org.springframework.web.reactive.function.client.WebClientResponseException ex) {
-        log.warn("Uncaught WebClientResponseException {}: {}", ex.getStatusCode(), ex.getMessage());
-        return ResponseEntity
-                .status(HttpStatus.BAD_GATEWAY)
-                .body(errorBody(HttpStatus.BAD_GATEWAY,
-                        "An external service returned an error. Please try again."));
+            .status(ex.getStatus())
+            .body(errorBody(ex.getStatus(), ex.getMessage()));
     }
 
     // ── Validation errors (@Valid) ─────────────────────────────────────────
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .collect(Collectors.toMap(
-                        FieldError::getField,
-                        fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Invalid value",
-                        (a, b) -> a  // keep first error per field
-                ));
+            .getFieldErrors()
+            .stream()
+            .collect(Collectors.toMap(
+                FieldError::getField,
+                fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Invalid value",
+                (a, b) -> a  // keep first error per field
+            ));
 
         Map<String, Object> body = errorBody(HttpStatus.BAD_REQUEST, "Validation failed");
         body.put("errors", fieldErrors);
@@ -66,8 +45,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAll(Exception ex) {
         log.error("Unexpected error", ex);
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(errorBody(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"));
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(errorBody(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────

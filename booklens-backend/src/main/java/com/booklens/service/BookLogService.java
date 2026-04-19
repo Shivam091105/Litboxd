@@ -1,5 +1,6 @@
 package com.booklens.service;
 
+
 import com.booklens.books.BookApiService;
 import com.booklens.dto.book.BookDto;
 import com.booklens.dto.log.BookLogDto;
@@ -28,18 +29,18 @@ import java.util.Map;
 @Slf4j
 public class BookLogService {
 
-    private final BookLogRepository bookLogRepository;
-    private final UserRepository userRepository;
-    private final BookApiService bookApiService;
-    private final BookListRepository bookListRepository;
-    private final RecommendationService recommendationService;
+    private final BookLogRepository      bookLogRepository;
+    private final UserRepository         userRepository;
+    private final BookApiService         bookApiService;
+    private final BookListRepository     bookListRepository;
+    private final RecommendationService  recommendationService;
 
     // ── Log / update a book entry ─────────────────────────────────────────
 
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "recommendations", key = "#userId"),
-            @CacheEvict(value = "book-detail", key = "#externalBookId")
+            @CacheEvict(value = "book-detail",     key = "#externalBookId")
     })
     public BookLogDto logBook(Long userId, String externalBookId, Map<String, Object> payload) {
         User user = userRepository.findById(userId)
@@ -60,11 +61,9 @@ public class BookLogService {
         syncDefaultLists(userId, externalBookId, saved.getStatus());
 
         // Update persistent recommendation pool from this new signal.
-        // Only trigger when there's an actual rating (not just a status change with no
-        // stars),
+        // Only trigger when there's an actual rating (not just a status change with no stars),
         // because unrated logs give no taste signal useful for content-based filtering.
-        // Run async-style via try/catch so a recommendation failure never breaks a log
-        // save.
+        // Run async-style via try/catch so a recommendation failure never breaks a log save.
         if (saved.getRating() != null && saved.getRating() >= 2) {
             try {
                 recommendationService.onNewSignal(userId, externalBookId);
@@ -136,17 +135,18 @@ public class BookLogService {
                 .orElseThrow(() -> new BookLensException("User not found", HttpStatus.NOT_FOUND));
 
         LocalDate start = LocalDate.of(year, 1, 1);
-        LocalDate end = LocalDate.of(year + 1, 1, 1);
-        long booksRead = bookLogRepository.countBooksReadInYear(userId, start, end);
+        LocalDate end   = LocalDate.of(year + 1, 1, 1);
+        long booksRead  = bookLogRepository.countBooksReadInYear(userId, start, end);
 
-        int goal = user.getReadingGoal() != null ? user.getReadingGoal() : 36;
+        int    goal    = user.getReadingGoal() != null ? user.getReadingGoal() : 36;
         double percent = goal > 0 ? Math.min(100.0, booksRead * 100.0 / goal) : 0;
 
         return Map.of(
-                "year", year,
-                "goal", goal,
+                "year",      year,
+                "goal",      goal,
                 "booksRead", booksRead,
-                "percent", (long) Math.round(percent));
+                "percent",   (long) Math.round(percent)
+        );
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
@@ -161,18 +161,14 @@ public class BookLogService {
         }
         if (payload.containsKey("startedAt")) {
             String v = (String) payload.get("startedAt");
-            if (v != null && !v.isBlank())
-                log.setStartedAt(LocalDate.parse(v));
+            if (v != null && !v.isBlank()) log.setStartedAt(LocalDate.parse(v));
         }
         if (payload.containsKey("finishedAt")) {
             String v = (String) payload.get("finishedAt");
-            if (v != null && !v.isBlank())
-                log.setFinishedAt(LocalDate.parse(v));
+            if (v != null && !v.isBlank()) log.setFinishedAt(LocalDate.parse(v));
         }
-        if (payload.containsKey("reread"))
-            log.setReread(Boolean.TRUE.equals(payload.get("reread")));
-        if (payload.containsKey("privateEntry"))
-            log.setPrivateEntry(Boolean.TRUE.equals(payload.get("privateEntry")));
+        if (payload.containsKey("reread"))       log.setReread(Boolean.TRUE.equals(payload.get("reread")));
+        if (payload.containsKey("privateEntry")) log.setPrivateEntry(Boolean.TRUE.equals(payload.get("privateEntry")));
         if (payload.containsKey("tags") && payload.get("tags") != null)
             log.setTags((String) payload.get("tags"));
     }
@@ -216,12 +212,13 @@ public class BookLogService {
     // ── Auto-sync default lists ───────────────────────────────────────────────
 
     private static final java.util.Map<ReadingStatus, String> STATUS_TO_LIST = java.util.Map.of(
-            ReadingStatus.READ, "Read",
+            ReadingStatus.READ,    "Read",
             ReadingStatus.READING, "Currently Reading",
-            ReadingStatus.WANT, "Want to Read");
+            ReadingStatus.WANT,    "Want to Read"
+    );
 
-    private static final java.util.List<String> DEFAULT_LIST_TITLES = java.util.List.of("Read", "Currently Reading",
-            "Want to Read");
+    private static final java.util.List<String> DEFAULT_LIST_TITLES =
+            java.util.List.of("Read", "Currently Reading", "Want to Read");
 
     /**
      * Keeps the three default lists in sync with the user's log status.
@@ -233,11 +230,11 @@ public class BookLogService {
         try {
             String targetTitle = STATUS_TO_LIST.get(newStatus);
             User listUser = userRepository.findById(userId).orElse(null);
-            if (listUser == null)
-                return;
+            if (listUser == null) return;
 
             for (String listTitle : DEFAULT_LIST_TITLES) {
-                java.util.Optional<BookList> optList = bookListRepository.findByUserIdAndTitle(userId, listTitle);
+                java.util.Optional<BookList> optList =
+                        bookListRepository.findByUserIdAndTitle(userId, listTitle);
 
                 BookList list;
                 if (optList.isPresent()) {

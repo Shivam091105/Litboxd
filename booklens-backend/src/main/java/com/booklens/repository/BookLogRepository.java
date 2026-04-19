@@ -21,23 +21,19 @@ public interface BookLogRepository extends JpaRepository<BookLog, Long> {
     Page<BookLog> findByUserIdOrderByUpdatedAtDesc(Long userId, Pageable pageable);
 
     Page<BookLog> findByUserIdAndStatusOrderByUpdatedAtDesc(
-            Long userId, ReadingStatus status, Pageable pageable);
+        Long userId, ReadingStatus status, Pageable pageable);
 
     /** All external book IDs the user has ever logged */
     @Query("SELECT bl.externalBookId FROM BookLog bl WHERE bl.user.id = :userId")
     List<String> findExternalBookIdsByUserId(@Param("userId") Long userId);
 
-    /** Book IDs the user rated highly (≥ 7 = 3.5+ stars) — primary recommendation seeds */
-    @Query("SELECT bl.externalBookId FROM BookLog bl WHERE bl.user.id = :userId AND bl.rating >= 7 ORDER BY bl.rating DESC")
+    /** Book IDs the user rated highly (≥ 7 = 3.5+ stars) — feeds recommendation engine */
+    @Query("SELECT bl.externalBookId FROM BookLog bl WHERE bl.user.id = :userId AND bl.rating >= 7")
     List<String> findHighlyRatedExternalBookIdsByUserId(@Param("userId") Long userId);
 
-    /** Book IDs the user rated at any level (≥ 2 = 1★+) — secondary recommendation seeds */
-    @Query("SELECT bl.externalBookId FROM BookLog bl WHERE bl.user.id = :userId AND bl.rating IS NOT NULL ORDER BY bl.rating DESC")
+    /** Book IDs the user has rated at all (any non-null rating) — fallback for recommendation seeding */
+    @Query("SELECT bl.externalBookId FROM BookLog bl WHERE bl.user.id = :userId AND bl.rating IS NOT NULL")
     List<String> findAnyRatedExternalBookIdsByUserId(@Param("userId") Long userId);
-
-    /** Book IDs by status — for "currently reading" seeds */
-    @Query("SELECT bl.externalBookId FROM BookLog bl WHERE bl.user.id = :userId AND bl.status = 'READING'")
-    List<String> findCurrentlyReadingExternalBookIdsByUserId(@Param("userId") Long userId);
 
     /** Count books finished in a given year (LocalDate range, avoids YEAR() JPQL issue) */
     @Query("""
@@ -48,9 +44,9 @@ public interface BookLogRepository extends JpaRepository<BookLog, Long> {
         AND   bl.finishedAt    < :startOfNextYear
         """)
     long countBooksReadInYear(
-            @Param("userId")          Long userId,
-            @Param("startOfYear")     LocalDate startOfYear,
-            @Param("startOfNextYear") LocalDate startOfNextYear
+        @Param("userId")          Long userId,
+        @Param("startOfYear")     LocalDate startOfYear,
+        @Param("startOfNextYear") LocalDate startOfNextYear
     );
 
     /** Activity feed: recent non-private logs from followed users */

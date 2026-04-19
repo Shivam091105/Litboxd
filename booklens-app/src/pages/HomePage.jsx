@@ -18,9 +18,9 @@ export default function HomePage() {
   const { isAuthenticated } = useAuthStore()
 
   // ── Real API data ──────────────────────────────────────────────────────
-  const { data: popularBooksData, isLoading: booksLoading } = usePopularBooks(8)
+  const { data: popularBooksData, isLoading: booksLoading } = usePopularBooks(7)
   const { data: popularReviewsData, isLoading: reviewsLoading } = usePopularReviews(6)
-  const { data: feedData, isLoading: feedLoading } = useFeed(20)
+  const { data: feedData, isLoading: feedLoading } = useFeed(10)
   const { data: challengeData } = useChallenge()
   const { data: recommendations } = useRecommendations()
 
@@ -109,7 +109,7 @@ export default function HomePage() {
         <SectionHeader title="Popular this week" linkLabel="Browse all →" onLinkClick={() => navigate('/browse')} />
         <div className={styles.booksGrid}>
           {booksLoading
-            ? Array.from({ length: 6 }).map((_, i) => <BookCardSkeleton key={i} />)
+            ? Array.from({ length: 7 }).map((_, i) => <BookCardSkeleton key={i} />)
             : popularBooks.length > 0
               ? popularBooks.map((book, i) => <BookCard key={book.externalId ?? book.id ?? i} book={book} />)
               : <EmptyState message="No books yet. Be the first to log one!" />
@@ -150,7 +150,7 @@ export default function HomePage() {
               />
             )}
             <GenreFilter />
-            <WhoToFollow />
+            {/* <WhoToFollow /> */}
             <TrendingLists />
           </div>
         </div>
@@ -174,27 +174,46 @@ export default function HomePage() {
 
 // ── Helpers: normalise backend shape → component props ────────────────────────
 function normaliseLog(log) {
+  // Backend BookLogDto uses flat fields: bookTitle, bookAuthor, bookExternalId, bookCoverUrl, username
+  const username = log.username ?? log.user?.username ?? 'Anonymous'
+  const bookTitle = log.bookTitle ?? log.book?.title ?? 'a book'
+  const bookAuthor = log.bookAuthor ?? log.book?.author ?? ''
+  const bookExternalId = log.bookExternalId ?? log.book?.externalId ?? null
+  const bookCoverUrl = log.bookCoverUrl ?? log.book?.coverUrl ?? null
+  const rating = log.rating ?? null
+  const status = log.status ?? 'READ'
+
+  // Determine action verb based on status
+  const actionVerb = status === 'WANT' ? 'wants to read'
+    : status === 'READING' ? 'started reading'
+      : 'logged'
+
+  // Build star display for rating
+  const starDisplay = rating ? ' ' + '★'.repeat(Math.round(rating)) : ''
+
   return {
     id: log.id,
-    userInitial: log.user?.username?.[0]?.toUpperCase() ?? '?',
+    userInitial: username[0]?.toUpperCase() ?? '?',
     userColor: 'linear-gradient(135deg,#1c5e3a,#0d2e1a)',
-    username: log.user?.username,
+    username,
     action: (
       <>
-        <strong>{log.user?.username}</strong> logged{' '}
-        {log.book?.externalId
-          ? <a href={`/book/${log.book.externalId}`}>{log.book?.title}</a>
-          : <span>{log.book?.title}</span>
+        <strong>{username}</strong> {actionVerb}{' '}
+        {bookExternalId
+          ? <a href={`/book/${bookExternalId}`}>{bookTitle}</a>
+          : <span>{bookTitle}</span>
         }
+        {starDisplay && <span style={{ color: 'var(--accent-green)', marginLeft: 6 }}>{starDisplay}</span>}
       </>
     ),
-    bookMini: log.book ? {
-      title: log.book.title,
-      author: log.book.author,
-      coverColor: 'bc' + ((log.book.id % 8) + 1),
-      rating: log.rating ? Math.round(log.rating / 2) : null,
-    } : null,
-    time: formatTime(log.updatedAt),
+    bookMini: {
+      title: bookTitle,
+      author: bookAuthor,
+      coverUrl: bookCoverUrl,
+      coverColor: 'bc' + ((typeof log.id === 'number' ? log.id % 8 : 0) + 1),
+      rating: rating ? Math.round(rating) : null,
+    },
+    time: formatTime(log.updatedAt ?? log.createdAt),
     likes: 0,
   }
 }

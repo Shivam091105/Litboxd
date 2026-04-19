@@ -1,330 +1,357 @@
-/* ══════════════════════════════════════════
-   Browse Page — production-grade styles
-   All book cards share a single consistent
-   2:3 aspect-ratio cover. No layout shift.
-══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   BROWSE PAGE — Production Design
+   Consistent book card sizes, professional grid, polished interactions
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .wrap {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 40px 24px 100px;
+  padding: 40px 28px 80px;
 }
 
-/* ── Page header ─────────────────────────── */
+/* ── Page Header ── */
 .pageHeader {
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
 
-.eyebrow {
-  font-size: 11px;
+.pageLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 2px;
   text-transform: uppercase;
+  letter-spacing: 1.5px;
   color: var(--accent-green);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.labelDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
 }
 
 .pageTitle {
   font-family: 'Playfair Display', serif;
-  font-size: 34px;
+  font-size: 36px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 8px;
-  line-height: 1.15;
 }
 
 .pageSub {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
   margin: 0;
-  line-height: 1.6;
-  max-width: 480px;
+  max-width: 500px;
 }
 
-/* ── Filter bar ──────────────────────────── */
-.filterBar {
+/* ── Genre Pills ── */
+.genrePills {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 40px;
+}
+
+.genrePill {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 44px;
-}
-
-.filterBtn {
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--bg-card);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: all 0.2s ease;
   white-space: nowrap;
-  letter-spacing: 0.1px;
 }
 
-.filterBtn:hover {
-  border-color: var(--border-light);
-  color: var(--text-primary);
-}
-
-.filterBtnActive {
-  background: var(--accent-green);
+.genrePill:hover {
   border-color: var(--accent-green);
-  color: #0a1a0f;
-  font-weight: 600;
+  color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
-.filterBtnActive:hover {
-  color: #0a1a0f;
+.genrePillActive {
+  background: var(--accent-green);
+  color: #0d0f0e;
+  border-color: var(--accent-green);
+  font-weight: 700;
 }
 
-/* ── Genre rows (all-genres view) ─────────── */
+.genrePillActive:hover {
+  color: #0d0f0e;
+  transform: none;
+}
+
+.genreEmoji {
+  font-size: 14px;
+}
+
+/* ── Genre Rows (default overview) ── */
 .genreRows {
   display: flex;
   flex-direction: column;
-  gap: 52px;
+  gap: 44px;
 }
 
 .genreRow {
-  /* nothing special — just spacing from gap */
+  position: relative;
 }
 
 .rowHeader {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 18px;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .rowTitle {
   font-family: 'Playfair Display', serif;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.2px;
-}
-
-.seeAllBtn {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  margin: 0;
+}
+
+.rowCount {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.seeAll {
   background: none;
   border: none;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s;
-}
-
-.seeAllBtn:hover {
   color: var(--accent-green);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  padding: 4px 0;
 }
 
-/* Horizontal scroll row */
+.seeAll:hover {
+  opacity: 0.8;
+}
+
+/* Horizontal scroll container for genre rows */
 .rowScroll {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 110px;
-  gap: 14px;
+  display: flex;
+  gap: 16px;
   overflow-x: auto;
-  padding-bottom: 6px;
-  /* hide scrollbar but keep scrolling */
-  scrollbar-width: none;
+  overflow-y: hidden;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  /* fade edges */
+  mask-image: linear-gradient(90deg, #000 0%, #000 96%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 96%, transparent 100%);
 }
 
 .rowScroll::-webkit-scrollbar {
-  display: none;
+  height: 4px;
 }
 
-/* ── Genre grid (single-genre view) ───────── */
-.genreGrid {
-  margin-top: 4px;
+.rowScroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.genreGridHeader {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 24px;
+.rowScroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
 }
 
-.genreGridTitle {
+/* ── Genre Section (full view) ── */
+.genreSection {
+  margin-top: 8px;
+}
+
+.sectionTitle {
   font-family: 'Playfair Display', serif;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 24px;
 }
 
-.totalBadge {
-  font-size: 12px;
-  color: var(--text-muted);
+.totalCount {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
   font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 8px;
 }
 
+/* Full-view grid */
 .booksGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 20px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 24px 16px;
 }
 
-.empty {
-  font-size: 14px;
-  color: var(--text-muted);
-  grid-column: 1 / -1;
-  padding: 24px 0;
-}
-
-/* ══════════════════════════════════════════
-   Book Card
-   The cover is ALWAYS 2:3 aspect-ratio via
-   the coverWrap div — image or fallback both
-   fill it identically. No layout shift.
-══════════════════════════════════════════ */
-
+/* ── Book Card — Consistent sizing ── */
 .bookCard {
   cursor: pointer;
-  min-width: 0;
-  /* prevent grid blowout */
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 2:3 ratio container — the single source
-   of truth for cover dimensions */
+.bookCard:hover {
+  transform: translateY(-4px);
+}
+
+/* Fixed-ratio cover wrapper ensures consistent heights */
 .coverWrap {
   position: relative;
   width: 100%;
-  padding-bottom: 150%;
-  /* 2:3 = 150% */
-  border-radius: 6px;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
   overflow: hidden;
-  background: var(--bg-elevated);
+  margin-bottom: 10px;
   border: 1px solid var(--border);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background: var(--bg-elevated);
 }
 
-.bookCard:hover .coverWrap {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
-}
-
-/* Both coverImg and coverFallback are
-   absolutely positioned inside coverWrap */
-.coverImg,
-.coverFallback {
-  position: absolute;
-  inset: 0;
+.bookCover {
   width: 100%;
   height: 100%;
-}
-
-.coverImg {
   object-fit: cover;
   display: block;
 }
 
-.coverFallback {
+.bookCoverFallback {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.fallbackInitial {
   font-family: 'Playfair Display', serif;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.25);
-  text-transform: uppercase;
-  user-select: none;
+  color: rgba(255, 255, 255, 0.35);
 }
 
-/* Subtle top-to-transparent sheen on hover */
-.coverSheen {
+/* Hover overlay */
+.coverOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0.04) 0%,
-      transparent 40%);
-  pointer-events: none;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.25s ease;
 }
 
-.bookCard:hover .coverSheen {
+.bookCard:hover .coverOverlay {
   opacity: 1;
 }
 
-/* ── Card text ───────────────────────────── */
-.cardMeta {
-  margin-top: 9px;
-  min-width: 0;
+.viewBtn {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+  letter-spacing: 0.4px;
 }
 
-.cardTitle {
-  font-size: 12px;
+/* Book text info */
+.bookMeta {
+  min-height: 44px;
+}
+
+.bookTitle {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.35;
-  margin: 0 0 2px;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin-bottom: 2px;
 }
 
-.cardAuthor {
-  font-size: 11px;
+.bookAuthor {
+  font-size: 12px;
   color: var(--text-secondary);
-  margin: 0;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.cardRating {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+.bookYear {
   font-size: 11px;
   color: var(--text-muted);
-  margin: 4px 0 0;
+  margin-top: 2px;
   font-family: 'DM Mono', monospace;
 }
 
-.star {
-  color: var(--accent-amber);
-  font-size: 10px;
+/* Horizontal scroll book cards — fixed width */
+.rowScroll .bookCard {
+  min-width: 140px;
+  max-width: 140px;
+  flex-shrink: 0;
 }
 
-/* ── Skeletons ───────────────────────────── */
-.skeletonCover {
-  animation: skelPulse 1.4s ease-in-out infinite;
+/* ── Skeletons ── */
+.bookSkeleton {
+  min-width: 140px;
+  max-width: 140px;
+  flex-shrink: 0;
 }
 
-.skeletonLine {
+.coverSkeleton {
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  animation: pulse 1.5s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+.titleSkeleton {
+  height: 13px;
+  width: 90%;
   border-radius: 4px;
   background: var(--bg-elevated);
-  animation: skelPulse 1.4s ease-in-out infinite;
-  margin-bottom: 5px;
+  animation: pulse 1.5s ease-in-out infinite;
+  margin-bottom: 4px;
 }
 
-.skeletonTitle {
-  height: 12px;
-  width: 88%;
-  margin-top: 9px;
-}
-
-.skeletonAuthor {
-  height: 10px;
+.authorSkeleton {
+  height: 11px;
   width: 60%;
-  animation-delay: 0.1s;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes skelPulse {
+@keyframes pulse {
 
   0%,
   100% {
@@ -332,47 +359,66 @@
   }
 
   50% {
-    opacity: 0.38;
+    opacity: 0.35;
   }
 }
 
-/* ── Responsive ──────────────────────────── */
+/* ── Responsive ── */
 @media (max-width: 900px) {
+  .wrap {
+    padding: 28px 20px 60px;
+  }
+
+  .pageTitle {
+    font-size: 30px;
+  }
+
   .booksGrid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 16px 12px;
+  }
+
+  .rowScroll .bookCard,
+  .bookSkeleton {
+    min-width: 120px;
+    max-width: 120px;
   }
 }
 
 @media (max-width: 600px) {
   .wrap {
-    padding: 24px 16px 72px;
+    padding: 20px 16px 60px;
   }
 
   .pageTitle {
-    font-size: 26px;
+    font-size: 24px;
   }
 
   .booksGrid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 14px 10px;
   }
 
-  .rowScroll {
-    grid-auto-columns: 90px;
-    gap: 10px;
+  .genrePills {
+    gap: 6px;
   }
 
-  .genreRows {
-    gap: 40px;
+  .genrePill {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
-  .filterBar {
-    gap: 5px;
+  .rowScroll .bookCard,
+  .bookSkeleton {
+    min-width: 110px;
+    max-width: 110px;
   }
 
-  .filterBtn {
-    padding: 5px 11px;
+  .bookTitle {
+    font-size: 12px;
+  }
+
+  .bookAuthor {
     font-size: 11px;
   }
 }
